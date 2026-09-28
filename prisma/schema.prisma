@@ -1,0 +1,97 @@
+generator client {
+  provider     = "prisma-client"
+  output       = "../src/generated/prisma"
+  moduleFormat = "cjs"
+}
+
+datasource db {
+  provider = "sqlite"
+}
+
+model Job {
+  id              Int       @id @default(autoincrement())
+  source          String // greenhouse | lever | ashby | remotive | remoteok | wwr
+  board           String // ATS slug, or feed name for remote boards
+  externalId      String
+  company         String
+  title           String
+  location        String?
+  remote          Boolean   @default(false)
+  department      String?
+  employmentType  String?
+  salaryText      String? // free text, only if the source publishes it
+  url             String
+  applyUrl        String?
+  descriptionText String
+  postedAt        DateTime?
+  contentHash     String
+  dedupeKey       String
+  duplicateOfId   Int?
+  firstSeenAt     DateTime  @default(now())
+  lastSeenAt      DateTime  @default(now())
+  closedAt        DateTime?
+  filterStatus    String // passed | rejected
+  filterReason    String?
+  status          String    @default("new")
+  statusNote      String?
+  statusUpdatedAt DateTime  @default(now())
+
+  extraction   Extraction?
+  applications Application[]
+
+  @@unique([source, board, externalId])
+  @@index([status, filterStatus])
+  @@index([dedupeKey])
+}
+
+model Extraction {
+  id                  Int      @id @default(autoincrement())
+  jobId               Int      @unique
+  job                 Job      @relation(fields: [jobId], references: [id], onDelete: Cascade)
+  contentHash         String // hash of the job content it was computed from
+  promptVersion       String
+  model               String
+  roleSummary         String
+  requirements        String // JSON string[]
+  niceToHave          String // JSON string[]
+  stack               String // JSON string[]
+  seniority           String
+  yearsExperienceMin  Int?
+  remotePolicy        String
+  locationRestriction String?
+  matchScore          Int
+  matchReasons        String // JSON string[]
+  gaps                String // JSON string[]
+  redFlags            String // JSON string[]
+  createdAt           DateTime @default(now())
+}
+
+model Application {
+  id           Int       @id @default(autoincrement())
+  jobId        Int
+  job          Job       @relation(fields: [jobId], references: [id], onDelete: Cascade)
+  cvPdfPath    String
+  tailoredJson String // JSON of the tailored CV (for audit)
+  createdAt    DateTime  @default(now())
+  appliedAt    DateTime?
+  notes        String?
+}
+
+model SourceState {
+  id            Int       @id @default(autoincrement())
+  source        String
+  board         String
+  lastFetchedAt DateTime?
+  lastOk        Boolean   @default(true)
+  lastError     String?
+  lastJobCount  Int       @default(0)
+
+  @@unique([source, board])
+}
+
+model SyncRun {
+  id         Int       @id @default(autoincrement())
+  startedAt  DateTime  @default(now())
+  finishedAt DateTime?
+  stats      String? // JSON
+}

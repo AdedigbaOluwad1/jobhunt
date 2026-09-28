@@ -1,9 +1,17 @@
 import { Command, CommandRunner, Option } from 'nest-commander';
-import { SyncService } from '../jobs/sync.service';
+import { SyncService, SyncStats } from '../jobs/sync.service';
 
 interface SyncCommandOptions {
   source?: string;
   dryRun?: boolean;
+}
+
+function topReasons(counts: Record<string, number>, limit = 3): string {
+  return Object.entries(counts)
+    .sort((a, b) => b[1] - a[1])
+    .slice(0, limit)
+    .map(([reason, count]) => `${reason} ×${count}`)
+    .join(', ');
 }
 
 @Command({ name: 'sync', description: 'Fetch jobs from configured sources and store new/changed listings' })
@@ -19,15 +27,24 @@ export class SyncCommand extends CommandRunner {
 
     console.log(`${options.dryRun ? 'Dry-run sync' : 'Sync'} complete in ${seconds}s`);
 
-    const failedSummary = stats.failedTargets.map((f) => `${f.source}:${f.board} — ${f.error}`).join('; ');
+    // Adapter errors already read "source:board — message", so join them as-is.
+    const failedSummary = stats.failedTargets.map((f) => f.error).join('; ');
     console.log(`Sources: ${stats.targetsOk} ok, ${stats.targetsFailed} failed${failedSummary ? ` (${failedSummary})` : ''}`);
     console.log(
-      `Fetched ${stats.fetched} jobs → ${stats.inserted} new, ${stats.changed} changed, ${stats.duplicates} duplicates`,
+      `Fetched ${stats.fetched} jobs → ${stats.inserted} new, ${stats.changed} changed, ${stats.closed} closed, ${stats.duplicates} duplicates`,
     );
+    this.printFilterSummary(stats);
 
     if (stats.targetsFailed > 0) {
       process.exitCode = 2;
     }
+  }
+
+  private printFilterSummary(stats: SyncStats): void {
+    const total = stats.filterPassed + stats.filterRejected;
+    if (total === 0) return;
+    const reasons = topReasons(stats.filterReasonCounts);
+    console.log(`Filtered: ${stats.filterPassed} passed, ${stats.filterRejected} rejected${reasons ? ` (top reasons: ${reasons})` : ''}`);
   }
 
   @Option({ flags: '--source <name>', description: 'Only sync one source, e.g. greenhouse or greenhouse:stripe' })

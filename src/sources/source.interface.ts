@@ -10,6 +10,8 @@ export function isAtsSource(source: string): boolean {
 export interface SourceTarget {
   source: SourceName;
   board: string;
+  /** Remote-board aggregators set this; SyncService skips the fetch if SourceState.lastFetchedAt is more recent than this. */
+  minIntervalHours?: number;
 }
 
 export interface RawJob {

@@ -23,6 +23,7 @@
     "@prisma/adapter-better-sqlite3": "^7.10.0",
     "@prisma/client": "7.10.0",
     "dotenv": "^18.0.4",
+    "fast-xml-parser": "^5.11.1",
     "html-to-text": "^10.0.1",
     "nest-commander": "^3.21.0",
     "picocolors": "^1.1.1",

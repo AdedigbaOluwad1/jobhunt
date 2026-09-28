@@ -11,3 +11,6 @@ out/
 
 # fixtures may contain nothing sensitive but keep local scratch out too
 .DS_Store
+
+# internal working notes — not for the public repo
+docs/DECISIONS.md

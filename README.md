@@ -87,39 +87,145 @@ jobhunt init
 
 ## Configuration
 
-Edit `~/.jobhunt/config.yaml`:
+`jobhunt init` copies two annotated templates into `$JOBHUNT_HOME` —
+[`templates/config.example.yaml`](templates/config.example.yaml) and
+[`templates/master-cv.example.yaml`](templates/master-cv.example.yaml) —
+with placeholder values marked for replacement. The two worked examples
+below show what a complete, functioning setup looks like once filled in,
+for a fictional backend engineer named Jordan Ellis.
+
+### Example: `config.yaml`
 
 ```yaml
+profile:
+  # Used only for match scoring — never sent in full, and never used for tailoring.
+  summary: >
+    Backend engineer with 7 years of experience building distributed systems
+    in TypeScript and Go. Strong with queue-based architectures, PostgreSQL,
+    and infrastructure reliability.
+  yearsExperience: 7
+  targetTitles: [backend engineer, senior backend engineer, infrastructure engineer]
+  mustHaveSkills: [typescript, postgresql]
+  dealbreakers: ["security clearance", "on-site only"]
+
 sources:
-  greenhouse: [stripe, figma]   # Greenhouse board tokens
-  lever: [veeva]                # Lever company slugs
-  lever_eu: [somecompany]       # Lever accounts hosted on api.eu.lever.co
-  ashby: [linear]               # Ashby job board names
+  greenhouse: [stripe, figma]        # board tokens — see `jobhunt sources add` to find more
+  lever: [veeva]                     # company slugs
+  ashby: [linear, ramp]              # job board names
   remote:
     remotive: { enabled: true, categories: [software-dev], minIntervalHours: 12 }
     remoteok: { enabled: true, minIntervalHours: 12 }
     wwr:      { enabled: true, feeds: [remote-programming-jobs], minIntervalHours: 12 }
 
 filters:
-  titleInclude: [engineer, developer, backend, full stack]
-  titleExclude: [intern, principal, director, manager, recruiter]
+  titleInclude: [backend, infrastructure, platform, distributed systems]
+  titleExclude: [intern, principal, director, manager, frontend, mobile]
   remoteOnly: true
-  locationsAllow: [remote, worldwide, emea, africa]  # applied only to non-remote jobs
-  descriptionExclude: ["security clearance", "us work authorization"]
-  maxAgeDays: 30
+  locationsAllow: [remote, worldwide, us, emea]
+  descriptionExclude: ["security clearance", "us citizenship required"]
+  maxAgeDays: 21
+
+llm:
+  extractionModel: claude-haiku-4-5-20251001   # verify current model IDs in Anthropic docs
+  tailorModel: claude-sonnet-5
+  maxDescriptionChars: 12000
+  extractionConcurrency: 3
+
+sync:
+  httpConcurrency: 5
+  httpTimeoutMs: 15000
+  httpRetries: 2
+  maxExtractPerRun: 50
+  minScoreToHighlight: 75
+
+cv:
+  maxPages: 1
+  maxBulletsPerRole: 4
+  paper: A4
 ```
 
-`profile` (summary, years of experience, target titles, must-have skills,
-dealbreakers) and `llm` (model selection, description length cap,
-concurrency) drive match scoring. See `templates/config.example.yaml` for
-the complete, annotated schema.
+Every source slug above (`stripe`, `figma`, `veeva`, `linear`, `ramp`) is a
+real, currently active board — this file works as-is if you drop it in and
+run `jobhunt sync`. See [Configuration reference](#configuration-reference)
+below for every field.
 
-Then populate `~/.jobhunt/master-cv.yaml` with your real experience —
-`templates/master-cv.example.yaml` documents the full shape. Every
-experience, project, education, and bullet entry requires a stable, unique
-`id`; tailoring references bullets by id, and ids must not change once in
-use. `cv.maxBulletsPerRole` and `cv.maxPages` control how aggressively
-tailoring trims content to fit.
+### Example: `master-cv.yaml`
+
+Every experience, project, education, and bullet entry needs a stable,
+unique `id` — tailoring references bullets by id, and ids must not change
+once you've synced or tailored against them.
+
+```yaml
+basics:
+  name: Jordan Ellis
+  email: jordan.ellis@example.com
+  phone: "+1 555-0142"
+  location: Austin, TX
+  links:
+    - { label: GitHub, url: https://github.com/jordanellis }
+    - { label: LinkedIn, url: https://linkedin.com/in/jordanellis }
+
+summary: >
+  Backend engineer with 7 years of experience designing and scaling
+  distributed systems. Focused on queue-based architectures, developer
+  tooling, and infrastructure reliability.
+
+skills:
+  - group: Languages
+    items: [TypeScript, Go, SQL]
+  - group: Backend
+    items: [Node.js, NestJS, Prisma, BullMQ, PostgreSQL, Redis]
+  - group: Infrastructure
+    items: [AWS, Docker, Terraform, GitHub Actions]
+
+experience:
+  - id: exp-northwind
+    company: Northwind Labs
+    title: Senior Backend Engineer
+    location: Remote
+    start: "2021-06"
+    end: null                 # null = present
+    bullets:
+      - id: exp-northwind-1
+        text: Redesigned the event ingestion pipeline with BullMQ and Redis, cutting p95 processing latency from 4.2s to 380ms.
+        tags: [bullmq, redis, backend]
+      - id: exp-northwind-2
+        text: Migrated a monolithic billing service to a NestJS microservice, reducing billing-related incidents by 60% over two quarters.
+        tags: [nestjs, migration]
+      - id: exp-northwind-3
+        text: Introduced Terraform-managed staging/production parity, eliminating environment-drift bugs.
+        tags: [terraform, infrastructure]
+
+  - id: exp-vertex
+    company: Vertex Analytics
+    title: Backend Engineer
+    location: Austin, TX
+    start: "2018-08"
+    end: "2021-05"
+    bullets:
+      - id: exp-vertex-1
+        text: Built a multi-tenant reporting API in Node.js and PostgreSQL serving 200+ enterprise customers.
+        tags: [nodejs, postgresql]
+      - id: exp-vertex-2
+        text: Implemented row-level security and query-plan optimizations that cut average dashboard load time by 45%.
+        tags: [postgresql, performance]
+
+projects:
+  - id: proj-queuelens
+    name: QueueLens
+    url: https://github.com/jordanellis/queuelens
+    bullets:
+      - id: proj-queuelens-1
+        text: Built an open-source BullMQ monitoring dashboard with real-time job-failure alerting.
+        tags: [bullmq, opensource]
+
+education:
+  - id: edu-utexas
+    institution: University of Texas at Austin
+    degree: B.S. Computer Science
+    start: "2014"
+    end: "2018"
+```
 
 ### Configuration reference
 

@@ -37,7 +37,10 @@ export class JobsRepository {
     return this.prismaService;
   }
 
-  async upsertJob(job: NormalizedJob): Promise<{ job: Job; status: UpsertStatus }> {
+  async upsertJob(
+    job: NormalizedJob,
+    filterResult: { status: string; reason: string | null },
+  ): Promise<{ job: Job; status: UpsertStatus }> {
     const existing = await this.prisma.job.findUnique({
       where: { source_board_externalId: { source: job.source, board: job.board, externalId: job.externalId } },
     });
@@ -61,8 +64,8 @@ export class JobsRepository {
           postedAt: job.postedAt,
           contentHash: job.contentHash,
           dedupeKey: job.dedupeKey,
-          // real filter rules land in Phase 2; everything passes for now
-          filterStatus: 'passed',
+          filterStatus: filterResult.status,
+          filterReason: filterResult.reason,
         },
       });
       return { job: created, status: 'inserted' };
@@ -94,7 +97,8 @@ export class JobsRepository {
         dedupeKey: job.dedupeKey,
         lastSeenAt: new Date(),
         closedAt: null,
-        filterStatus: 'passed',
+        filterStatus: filterResult.status,
+        filterReason: filterResult.reason,
       },
     });
     return { job: updated, status: 'changed' };
@@ -184,5 +188,28 @@ export class JobsRepository {
 
   async getSourceStates(): Promise<SourceState[]> {
     return this.prisma.sourceState.findMany({ orderBy: [{ source: 'asc' }, { board: 'asc' }] });
+  }
+
+  /** Every non-closed job, for re-running filters against the current config (spec 9.2). */
+  async findAllNonClosed(): Promise<Job[]> {
+    return this.prisma.job.findMany({ where: { closedAt: null } });
+  }
+
+  async updateFilterResult(id: number, status: string, reason: string | null): Promise<void> {
+    await this.prisma.job.update({ where: { id }, data: { filterStatus: status, filterReason: reason } });
+  }
+
+  /**
+   * Closes every previously-known, non-closed job for (source, board) that
+   * wasn't in this fetch's full listing. Only call this after a fetch that
+   * succeeded and returned the complete listing — a partial/failed fetch must
+   * never be treated as "these jobs are gone".
+   */
+  async closeMissingJobs(source: string, board: string, presentExternalIds: string[]): Promise<number> {
+    const result = await this.prisma.job.updateMany({
+      where: { source, board, closedAt: null, externalId: { notIn: presentExternalIds } },
+      data: { closedAt: new Date() },
+    });
+    return result.count;
   }
 }

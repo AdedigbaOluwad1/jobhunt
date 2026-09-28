@@ -1,5 +1,6 @@
 import { JobsRepository } from '../src/db/jobs.repository';
 import { PrismaService } from '../src/db/prisma.service';
+import { FilterService } from '../src/jobs/filter.service';
 import { SyncService } from '../src/jobs/sync.service';
 import { JobSource, RawJob, SourceTarget } from '../src/sources/source.interface';
 import { SourcesService } from '../src/sources/sources.service';
@@ -43,7 +44,8 @@ function makeSyncService(sources: JobSource[]): SyncService {
   const configService = { load: () => makeTestConfig() } as unknown as ConfigService;
   const sourcesService = { all: () => sources, bySourceName: () => undefined } as unknown as SourcesService;
   const jobsRepository = new JobsRepository(new PrismaService());
-  return new SyncService(configService, sourcesService, jobsRepository);
+  const filterService = new FilterService(configService);
+  return new SyncService(configService, sourcesService, jobsRepository, filterService);
 }
 
 describe('SyncService', () => {
@@ -119,5 +121,94 @@ describe('SyncService', () => {
     const atsJob = await jobsRepository.findExistingByKey('greenhouse', 'acme', 'g1');
     expect(atsJob?.duplicateOfId).toBeNull();
     expect(remoteJob?.duplicateOfId).toBe(atsJob?.id);
+  });
+
+  it('closes a job that disappears from a successful fetch', async () => {
+    let jobs = [rawJob({ externalId: '1' }), rawJob({ externalId: '2', title: 'Frontend Engineer' })];
+    const source = new FakeSource('greenhouse', 'acme', () => jobs);
+    const sync = makeSyncService([source]);
+
+    await sync.sync();
+    jobs = [rawJob({ externalId: '1' })];
+    const stats = await sync.sync();
+
+    expect(stats.closed).toBe(1);
+    const closedJob = await jobsRepository.findExistingByKey('greenhouse', 'acme', '2');
+    expect(closedJob?.closedAt).not.toBeNull();
+    const stillOpen = await jobsRepository.findExistingByKey('greenhouse', 'acme', '1');
+    expect(stillOpen?.closedAt).toBeNull();
+  });
+
+  it('clears closedAt when a closed job reappears', async () => {
+    let jobs = [rawJob({ externalId: '1' }), rawJob({ externalId: '2' })];
+    const source = new FakeSource('greenhouse', 'acme', () => jobs);
+    const sync = makeSyncService([source]);
+
+    await sync.sync();
+    jobs = [rawJob({ externalId: '1' })];
+    await sync.sync();
+    jobs = [rawJob({ externalId: '1' }), rawJob({ externalId: '2' })];
+    await sync.sync();
+
+    const reappeared = await jobsRepository.findExistingByKey('greenhouse', 'acme', '2');
+    expect(reappeared?.closedAt).toBeNull();
+  });
+
+  it('does not close anything for a target whose fetch failed', async () => {
+    let shouldFail = false;
+    const jobs = [rawJob({ externalId: '1' }), rawJob({ externalId: '2' })];
+    const source = new FakeSource('greenhouse', 'acme', () => {
+      if (shouldFail) throw new Error('simulated fetch failure');
+      return jobs;
+    });
+    const sync = makeSyncService([source]);
+
+    await sync.sync();
+    shouldFail = true;
+    const stats = await sync.sync();
+
+    expect(stats.targetsFailed).toBe(1);
+    expect(stats.closed).toBe(0);
+    const job1 = await jobsRepository.findExistingByKey('greenhouse', 'acme', '1');
+    const job2 = await jobsRepository.findExistingByKey('greenhouse', 'acme', '2');
+    expect(job1?.closedAt).toBeNull();
+    expect(job2?.closedAt).toBeNull();
+  });
+
+  it('stores a rejected job with its filter reason instead of dropping it', async () => {
+    const configService = { load: () => makeTestConfig({ filters: { ...makeTestConfig().filters, titleInclude: ['frontend'] } }) } as unknown as ConfigService;
+    const jobsRepository2 = new JobsRepository(new PrismaService());
+    const sourcesService = {
+      all: () => [new FakeSource('greenhouse', 'acme', [rawJob({ title: 'Backend Engineer' })])],
+      bySourceName: () => undefined,
+    } as unknown as SourcesService;
+    const sync = new SyncService(configService, sourcesService, jobsRepository2, new FilterService(configService));
+
+    const stats = await sync.sync();
+
+    expect(stats.filterRejected).toBe(1);
+    expect(stats.filterPassed).toBe(0);
+    const job = await jobsRepository2.findExistingByKey('greenhouse', 'acme', '1');
+    expect(job?.filterStatus).toBe('rejected');
+    expect(job?.filterReason).toBe('title-no-match');
+  });
+
+  it('reclassifies an existing job when the config changes without a content change', async () => {
+    const permissive = makeTestConfig();
+    let config = permissive;
+    const configService = { load: () => config } as unknown as ConfigService;
+    const source = new FakeSource('greenhouse', 'acme', [rawJob({ title: 'Backend Engineer' })]);
+    const sourcesService = { all: () => [source], bySourceName: () => undefined } as unknown as SourcesService;
+    const filterService = new FilterService(configService);
+    const sync = new SyncService(configService, sourcesService, jobsRepository, filterService);
+
+    await sync.sync();
+    config = makeTestConfig({ filters: { ...permissive.filters, titleInclude: ['frontend'] } });
+    const stats = await sync.sync();
+
+    expect(stats.reclassified).toBe(1);
+    const job = await jobsRepository.findExistingByKey('greenhouse', 'acme', '1');
+    expect(job?.filterStatus).toBe('rejected');
+    expect(job?.filterReason).toBe('title-no-match');
   });
 });

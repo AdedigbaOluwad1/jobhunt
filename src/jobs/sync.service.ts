@@ -2,9 +2,10 @@ import { Injectable } from '@nestjs/common';
 import { withLimit } from '../common/limiter';
 import { ConfigService } from '../config/config.service';
 import { JobsRepository } from '../db/jobs.repository';
-import { JobSource, SourceTarget } from '../sources/source.interface';
+import { RawJob, JobSource, SourceTarget } from '../sources/source.interface';
 import { SourcesService } from '../sources/sources.service';
 import { resolveDuplicate } from './dedupe';
+import { FilterResult, FilterService } from './filter.service';
 import { normalize } from './normalize';
 
 export interface SyncOptions {
@@ -27,7 +28,19 @@ export interface SyncStats {
   inserted: number;
   changed: number;
   unchanged: number;
+  closed: number;
   duplicates: number;
+  filterPassed: number;
+  filterRejected: number;
+  filterReasonCounts: Record<string, number>;
+  /** Non-closed jobs whose filterStatus flipped on re-check, e.g. after editing config.yaml. */
+  reclassified: number;
+}
+
+interface FetchOutcome {
+  target: SourceTarget;
+  rawJobs: RawJob[];
+  ok: boolean;
 }
 
 @Injectable()
@@ -36,6 +49,7 @@ export class SyncService {
     private readonly configService: ConfigService,
     private readonly sourcesService: SourcesService,
     private readonly jobsRepository: JobsRepository,
+    private readonly filterService: FilterService,
   ) {}
 
   async sync(options: SyncOptions = {}): Promise<SyncStats> {
@@ -51,83 +65,32 @@ export class SyncService {
       inserted: 0,
       changed: 0,
       unchanged: 0,
+      closed: 0,
       duplicates: 0,
+      filterPassed: 0,
+      filterRejected: 0,
+      filterReasonCounts: {},
+      reclassified: 0,
     };
 
     const targets = this.collectTargets(options.sourceFilter);
+    const fetchResults = await Promise.all(targets.map((t) => limit(() => this.fetchTarget(t, options, stats))));
 
-    const fetchResults = await Promise.all(
-      targets.map(({ source, target }) =>
-        limit(async () => {
-          try {
-            const rawJobs = await source.fetch(target);
-            stats.targetsOk++;
-            if (!options.dryRun) {
-              await this.jobsRepository.upsertSourceState({
-                source: target.source,
-                board: target.board,
-                lastOk: true,
-                lastJobCount: rawJobs.length,
-              });
-            }
-            return rawJobs;
-          } catch (err) {
-            const message = err instanceof Error ? err.message : String(err);
-            stats.targetsFailed++;
-            stats.failedTargets.push({ source: target.source, board: target.board, error: message });
-            if (!options.dryRun) {
-              await this.jobsRepository.upsertSourceState({
-                source: target.source,
-                board: target.board,
-                lastOk: false,
-                lastError: message,
-                lastJobCount: 0,
-              });
-            }
-            return [];
-          }
-        }),
-      ),
-    );
+    for (const result of fetchResults) {
+      stats.fetched += result.rawJobs.length;
 
-    for (const rawJobs of fetchResults) {
-      stats.fetched += rawJobs.length;
-      for (const raw of rawJobs) {
-        const normalized = normalize(raw);
-
-        if (options.dryRun) {
-          const existing = await this.jobsRepository.findExistingByKey(
-            normalized.source,
-            normalized.board,
-            normalized.externalId,
-          );
-          if (!existing) stats.inserted++;
-          else if (existing.contentHash === normalized.contentHash) stats.unchanged++;
-          else stats.changed++;
-          continue;
-        }
-
-        const { job, status } = await this.jobsRepository.upsertJob(normalized);
-        if (status === 'unchanged') {
-          stats.unchanged++;
-          continue;
-        }
-        if (status === 'changed') {
-          stats.changed++;
-          continue;
-        }
-
-        stats.inserted++;
-        const duplicate = await this.jobsRepository.findDuplicateCandidate(job.dedupeKey, job.source, job.board);
-        const resolution = resolveDuplicate({ source: job.source }, duplicate);
-        if (resolution.newJobDuplicateOfId !== null) {
-          await this.jobsRepository.setDuplicateOf(job.id, resolution.newJobDuplicateOfId);
-          stats.duplicates++;
-        } else if (resolution.swapExistingId !== null) {
-          await this.jobsRepository.setDuplicateOf(resolution.swapExistingId, job.id);
-          stats.duplicates++;
-        }
+      for (const raw of result.rawJobs) {
+        await this.processRawJob(raw, options, stats);
       }
+
+      if (!options.dryRun && result.ok) {
+        const presentIds = result.rawJobs.map((j) => j.externalId);
+        stats.closed += await this.jobsRepository.closeMissingJobs(result.target.source, result.target.board, presentIds);
+      }
+    }
+
+    if (!options.dryRun) {
+      await this.reevaluateFilters(stats);
     }
 
     if (syncRun) {
@@ -135,6 +98,106 @@ export class SyncService {
     }
 
     return stats;
+  }
+
+  private async fetchTarget(
+    { source, target }: { source: JobSource; target: SourceTarget },
+    options: SyncOptions,
+    stats: SyncStats,
+  ): Promise<FetchOutcome> {
+    try {
+      const rawJobs = await source.fetch(target);
+      stats.targetsOk++;
+      if (!options.dryRun) {
+        await this.jobsRepository.upsertSourceState({
+          source: target.source,
+          board: target.board,
+          lastOk: true,
+          lastJobCount: rawJobs.length,
+        });
+      }
+      return { target, rawJobs, ok: true };
+    } catch (err) {
+      const message = err instanceof Error ? err.message : String(err);
+      stats.targetsFailed++;
+      stats.failedTargets.push({ source: target.source, board: target.board, error: message });
+      if (!options.dryRun) {
+        await this.jobsRepository.upsertSourceState({
+          source: target.source,
+          board: target.board,
+          lastOk: false,
+          lastError: message,
+          lastJobCount: 0,
+        });
+      }
+      return { target, rawJobs: [], ok: false };
+    }
+  }
+
+  private async processRawJob(raw: RawJob, options: SyncOptions, stats: SyncStats): Promise<void> {
+    const normalized = normalize(raw);
+    const filterResult = this.filterService.evaluate(normalized);
+
+    if (options.dryRun) {
+      const existing = await this.jobsRepository.findExistingByKey(
+        normalized.source,
+        normalized.board,
+        normalized.externalId,
+      );
+      if (!existing) stats.inserted++;
+      else if (existing.contentHash === normalized.contentHash) {
+        stats.unchanged++;
+        return;
+      } else stats.changed++;
+      this.tallyFilterResult(stats, filterResult);
+      return;
+    }
+
+    const { job, status } = await this.jobsRepository.upsertJob(normalized, filterResult);
+
+    if (status === 'unchanged') {
+      stats.unchanged++;
+      return;
+    }
+    this.tallyFilterResult(stats, filterResult);
+
+    if (status === 'changed') {
+      stats.changed++;
+      return;
+    }
+
+    stats.inserted++;
+    const duplicate = await this.jobsRepository.findDuplicateCandidate(job.dedupeKey, job.source, job.board);
+    const resolution = resolveDuplicate({ source: job.source }, duplicate);
+    if (resolution.newJobDuplicateOfId !== null) {
+      await this.jobsRepository.setDuplicateOf(job.id, resolution.newJobDuplicateOfId);
+      stats.duplicates++;
+    } else if (resolution.swapExistingId !== null) {
+      await this.jobsRepository.setDuplicateOf(resolution.swapExistingId, job.id);
+      stats.duplicates++;
+    }
+  }
+
+  private tallyFilterResult(stats: SyncStats, filterResult: FilterResult): void {
+    if (filterResult.status === 'passed') {
+      stats.filterPassed++;
+      return;
+    }
+    stats.filterRejected++;
+    const key = filterResult.reason ?? 'unknown';
+    stats.filterReasonCounts[key] = (stats.filterReasonCounts[key] ?? 0) + 1;
+  }
+
+  /** Re-checks every non-closed job against the current config, so editing config.yaml takes effect without a refetch. */
+  private async reevaluateFilters(stats: SyncStats): Promise<void> {
+    const jobs = await this.jobsRepository.findAllNonClosed();
+    for (const job of jobs) {
+      const result = this.filterService.evaluate(job);
+      if (result.status !== job.filterStatus || result.reason !== job.filterReason) {
+        await this.jobsRepository.updateFilterResult(job.id, result.status, result.reason);
+        stats.reclassified++;
+      }
+    }
   }
 
   private collectTargets(sourceFilter?: string): Array<{ source: JobSource; target: SourceTarget }> {

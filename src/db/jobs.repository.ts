@@ -188,6 +188,10 @@ export class JobsRepository {
     return this.prisma.job.findUnique({ where: { id }, include: { extraction: true } });
   }
 
+  async findByIds(ids: number[]): Promise<JobWithExtraction[]> {
+    return this.prisma.job.findMany({ where: { id: { in: ids } }, include: { extraction: true } });
+  }
+
   async createSyncRun(): Promise<SyncRun> {
     return this.prisma.syncRun.create({ data: {} });
   }

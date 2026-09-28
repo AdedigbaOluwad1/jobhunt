@@ -1,4 +1,6 @@
 import { Command, CommandRunner, Option } from 'nest-commander';
+import { printTable } from '../common/table';
+import { ConfigService } from '../config/config.service';
 import { SyncService, SyncStats } from '../jobs/sync.service';
 
 interface SyncCommandOptions {
@@ -23,7 +25,10 @@ function topReasons(counts: Record<string, number>, limit = 3): string {
 
 @Command({ name: 'sync', description: 'Fetch jobs from configured sources and store new/changed listings' })
 export class SyncCommand extends CommandRunner {
-  constructor(private readonly syncService: SyncService) {
+  constructor(
+    private readonly syncService: SyncService,
+    private readonly configService: ConfigService,
+  ) {
     super();
   }
 
@@ -52,6 +57,7 @@ export class SyncCommand extends CommandRunner {
     );
     this.printFilterSummary(stats);
     this.printExtractionSummary(stats, options.dryRun ?? false, noExtract);
+    this.printNewMatches(stats);
 
     if (stats.targetsFailed > 0) {
       process.exitCode = 2;
@@ -73,6 +79,28 @@ export class SyncCommand extends CommandRunner {
     }
     if (stats.extracted + stats.extractionFailed === 0) return;
     console.log(`Extracted ${stats.extracted} (${stats.extractionFailed} failed)`);
+  }
+
+  private printNewMatches(stats: SyncStats): void {
+    if (stats.newMatches.length === 0) return;
+    const minScore = this.configService.load().sync.minScoreToHighlight;
+    console.log(`\nNew matches ≥ ${minScore}:`);
+    printTable(
+      [
+        { header: 'id', key: 'id' },
+        { header: 'score', key: 'score' },
+        { header: 'company', key: 'company' },
+        { header: 'title', key: 'title' },
+        { header: 'location', key: 'location' },
+      ],
+      stats.newMatches.map((m) => ({
+        id: `#${m.id}`,
+        score: String(m.score),
+        company: m.company,
+        title: m.title,
+        location: m.location,
+      })),
+    );
   }
 
   @Option({ flags: '--source <name>', description: 'Only sync one source, e.g. greenhouse or greenhouse:stripe' })

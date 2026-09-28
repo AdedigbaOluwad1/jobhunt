@@ -265,4 +265,69 @@ describe('SyncService', () => {
       expect(second.targetsSkipped).toBe(0);
     });
   });
+
+  describe('new match highlights', () => {
+    function makeScoringExtractorService(scoreByExternalId: Record<string, number>): ExtractorService {
+      return {
+        extractDue: async (limit: number) => {
+          const due = await jobsRepository.findJobsNeedingExtraction('any', limit);
+          for (const job of due) {
+            const score = scoreByExternalId[job.externalId] ?? 0;
+            await jobsRepository.saveExtraction(job.id, {
+              contentHash: job.contentHash,
+              promptVersion: 'any',
+              model: 'test',
+              roleSummary: 'x',
+              requirements: [],
+              niceToHave: [],
+              stack: [],
+              seniority: 'mid',
+              yearsExperienceMin: null,
+              remotePolicy: 'remote',
+              locationRestriction: null,
+              matchScore: score,
+              matchReasons: [],
+              gaps: [],
+              redFlags: [],
+            });
+          }
+          return { attempted: due.length, succeeded: due.length, failed: 0, inputTokens: 0, outputTokens: 0 };
+        },
+      } as unknown as ExtractorService;
+    }
+
+    it('highlights only newly inserted jobs scoring at or above sync.minScoreToHighlight', async () => {
+      const configService = {
+        load: () => makeTestConfig({ sync: { ...makeTestConfig().sync, minScoreToHighlight: 70 } }),
+      } as unknown as ConfigService;
+      const source = new FakeSource('greenhouse', 'acme', [
+        rawJob({ externalId: '1', title: 'High scorer', remote: true }),
+        rawJob({ externalId: '2', title: 'Low scorer', remote: true }),
+      ]);
+      const sourcesService = { all: () => [source], bySourceName: () => undefined } as unknown as SourcesService;
+      const extractorService = makeScoringExtractorService({ '1': 92, '2': 40 });
+      const sync = new SyncService(configService, sourcesService, jobsRepository, new FilterService(configService), extractorService);
+
+      const stats = await sync.sync();
+
+      expect(stats.newMatches).toHaveLength(1);
+      expect(stats.newMatches[0]).toMatchObject({ score: 92, title: 'High scorer' });
+    });
+
+    it('does not highlight a job that was already known before this sync (only genuinely new ones)', async () => {
+      const configService = {
+        load: () => makeTestConfig({ sync: { ...makeTestConfig().sync, minScoreToHighlight: 70 } }),
+      } as unknown as ConfigService;
+      const source = new FakeSource('greenhouse', 'acme', [rawJob({ externalId: '1', remote: true })]);
+      const sourcesService = { all: () => [source], bySourceName: () => undefined } as unknown as SourcesService;
+      const extractorService = makeScoringExtractorService({ '1': 95 });
+      const sync = new SyncService(configService, sourcesService, jobsRepository, new FilterService(configService), extractorService);
+
+      const first = await sync.sync();
+      const second = await sync.sync();
+
+      expect(first.newMatches).toHaveLength(1);
+      expect(second.newMatches).toHaveLength(0);
+    });
+  });
 });

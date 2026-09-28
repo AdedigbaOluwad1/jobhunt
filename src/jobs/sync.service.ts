@@ -51,6 +51,15 @@ export interface SyncStats {
   llmInputTokens: number;
   llmOutputTokens: number;
   extractionSkippedReason?: string;
+  newMatches: NewMatch[];
+}
+
+export interface NewMatch {
+  id: number;
+  score: number;
+  company: string;
+  title: string;
+  location: string;
 }
 
 interface FetchOutcome {
@@ -99,8 +108,10 @@ export class SyncService {
       extractionFailed: 0,
       llmInputTokens: 0,
       llmOutputTokens: 0,
+      newMatches: [],
     };
 
+    const insertedJobIds: number[] = [];
     const targets = this.collectTargets(options.sourceFilter);
     const fetchResults = await Promise.all(targets.map((t) => limit(() => this.fetchTarget(t, options, stats))));
 
@@ -108,7 +119,7 @@ export class SyncService {
       stats.fetched += result.rawJobs.length;
 
       for (const raw of result.rawJobs) {
-        await this.processRawJob(raw, options, stats);
+        await this.processRawJob(raw, options, stats, insertedJobIds);
       }
 
       if (!options.dryRun && result.ok) {
@@ -129,6 +140,10 @@ export class SyncService {
       stats.llmInputTokens = extraction.inputTokens;
       stats.llmOutputTokens = extraction.outputTokens;
       stats.extractionSkippedReason = extraction.skippedReason;
+    }
+
+    if (!options.dryRun && insertedJobIds.length > 0) {
+      stats.newMatches = await this.collectNewMatches(insertedJobIds, config.sync.minScoreToHighlight);
     }
 
     if (syncRun) {
@@ -185,7 +200,7 @@ export class SyncService {
     }
   }
 
-  private async processRawJob(raw: RawJob, options: SyncOptions, stats: SyncStats): Promise<void> {
+  private async processRawJob(raw: RawJob, options: SyncOptions, stats: SyncStats, insertedJobIds: number[]): Promise<void> {
     const normalized = normalize(raw);
     const filterResult = this.filterService.evaluate(normalized);
 
@@ -218,6 +233,7 @@ export class SyncService {
     }
 
     stats.inserted++;
+    insertedJobIds.push(job.id);
     const duplicate = await this.jobsRepository.findDuplicateCandidate(job.dedupeKey, job.source, job.board);
     const resolution = resolveDuplicate({ source: job.source }, duplicate);
     if (resolution.newJobDuplicateOfId !== null) {
@@ -249,6 +265,20 @@ export class SyncService {
         stats.reclassified++;
       }
     }
+  }
+
+  private async collectNewMatches(insertedJobIds: number[], minScore: number): Promise<NewMatch[]> {
+    const jobs = await this.jobsRepository.findByIds(insertedJobIds);
+    return jobs
+      .filter((job) => job.filterStatus === 'passed' && !job.duplicateOfId && (job.extraction?.matchScore ?? -1) >= minScore)
+      .map((job) => ({
+        id: job.id,
+        score: job.extraction!.matchScore,
+        company: job.company,
+        title: job.title,
+        location: job.remote ? 'remote' : (job.location ?? ''),
+      }))
+      .sort((a, b) => b.score - a.score);
   }
 
   private collectTargets(sourceFilter?: string): Array<{ source: JobSource; target: SourceTarget }> {

@@ -3,6 +3,7 @@ import { z } from 'zod';
 import { AppError } from '../common/errors';
 import { fetchJson, HttpError } from '../common/http';
 import { ConfigService } from '../config/config.service';
+import { titleCaseSlug, toDate } from './adapter-helpers';
 import { JobSource, RawJob, SourceName, SourceTarget } from './source.interface';
 
 const GreenhouseJobSchema = z.object({
@@ -82,20 +83,7 @@ export class GreenhouseSource implements JobSource {
       url: job.absolute_url,
       applyUrl: job.absolute_url,
       descriptionHtml: job.content ?? undefined,
-      postedAt: parseDate(job.first_published ?? job.updated_at),
+      postedAt: toDate(job.first_published ?? job.updated_at),
     };
   }
-}
-
-function parseDate(value?: string | null): Date | undefined {
-  if (!value) return undefined;
-  const date = new Date(value);
-  return Number.isNaN(date.getTime()) ? undefined : date;
-}
-
-function titleCaseSlug(slug: string): string {
-  return slug
-    .split(/[-_]/)
-    .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
-    .join(' ');
 }

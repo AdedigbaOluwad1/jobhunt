@@ -1,0 +1,13 @@
+node_modules/
+dist/
+src/generated/
+*.tsbuildinfo
+
+# personal data — never commit anything from JOBHUNT_HOME
+.env
+*.db
+*.db-journal
+out/
+
+# fixtures may contain nothing sensitive but keep local scratch out too
+.DS_Store

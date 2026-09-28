@@ -1,0 +1,42 @@
+{
+  "name": "jobhunt",
+  "version": "0.1.0",
+  "description": "Personal CLI that finds, scores and helps you apply to matching jobs.",
+  "private": true,
+  "bin": {
+    "jobs": "dist/main.js"
+  },
+  "scripts": {
+    "prebuild": "prisma generate",
+    "build": "nest build",
+    "start": "node dist/main.js",
+    "dev": "nest start --watch",
+    "test": "jest",
+    "test:live": "jest --config jest.live.config.js",
+    "lint": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@anthropic-ai/sdk": "^0.128.0",
+    "@nestjs/common": "^12.1.1",
+    "@nestjs/core": "^12.1.1",
+    "@prisma/client": "7.10.0",
+    "dotenv": "^18.0.4",
+    "nest-commander": "^3.21.0",
+    "picocolors": "^1.1.1",
+    "reflect-metadata": "^0.2.2",
+    "rxjs": "^7.8.2",
+    "yaml": "^2.9.1",
+    "zod": "^4.6.5"
+  },
+  "devDependencies": {
+    "@nestjs/cli": "^12.0.8",
+    "@nestjs/testing": "^12.1.1",
+    "@types/jest": "^30.0.0",
+    "@types/node": "^24.0.0",
+    "jest": "^30.0.0",
+    "prisma": "7.10.0",
+    "ts-jest": "^29.4.5",
+    "ts-node": "^10.9.2",
+    "typescript": "^5.9.3"
+  }
+}

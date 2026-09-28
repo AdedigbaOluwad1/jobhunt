@@ -16,7 +16,7 @@ aid: `sync` finds and scores jobs, you decide what to do next.
 | 1 | Greenhouse adapter, sync/list/show/sources | ✅ |
 | 2 | Lever + Ashby adapters, real filtering, closed-job detection | ✅ |
 | 3 | LLM match scoring (`ExtractorService`), cached by content hash | ✅ |
-| 4 | CV tailoring + PDF generation | not started |
+| 4 | CV tailoring + PDF generation (`jobhunt tailor`) | ✅ |
 | 5 | Apply flow + status tracking (`apply`, `status`, `stats`) | not started |
 | 6 | Remote-board sources (Remotive, RemoteOK, We Work Remotely) | not started |
 | 7 | Docs, scheduling examples, polish | not started |
@@ -25,7 +25,8 @@ aid: `sync` finds and scores jobs, you decide what to do next.
 
 - Node.js 20+ (developed against 22)
 - npm
-- An Anthropic API key — only needed for the extraction step of `sync`; every other command works without one, and `sync` itself just skips extraction with a clear message if the key isn't set
+- An Anthropic API key — needed for `sync`'s extraction step and for `jobhunt tailor`; every other command works without one, and `sync` itself just skips extraction with a clear message if the key isn't set
+- Chromium, for `jobhunt tailor`'s PDF output: `npx playwright install chromium` (the command tells you to run this if it's missing)
 
 ## Install
 
@@ -44,10 +45,10 @@ jobhunt init
 ```
 ~/.jobhunt/
 ├─ config.yaml     # watchlist, filters, profile, settings
-├─ master-cv.yaml  # your CV, used starting Phase 4
+├─ master-cv.yaml  # your CV — fill this in with real experience before tailoring
 ├─ .env            # put ANTHROPIC_API_KEY here
 ├─ jobhunt.db      # SQLite database
-└─ out/            # generated PDFs land here later
+└─ out/            # tailored CV PDFs + JSON land here
 ```
 
 > The binary is named `jobhunt`, not `jobs` — `jobs` is a shell builtin
@@ -77,6 +78,13 @@ filters:
 skills, dealbreakers) and `llm` (which models to use, description length
 cap, concurrency) drive the match-scoring step — see
 `templates/config.example.yaml` for the full shape with comments.
+
+Then fill in `~/.jobhunt/master-cv.yaml` with your real experience —
+`templates/master-cv.example.yaml` has the full shape with comments. Every
+experience/project/education entry and every bullet needs a stable,
+unique `id`; tailoring references bullets by id, and ids should never
+change once you've used them. `cv.maxBulletsPerRole` and `cv.maxPages` in
+config.yaml control how aggressively tailoring trims content to fit.
 
 ## Commands
 
@@ -126,6 +134,24 @@ requirements, nice-to-haves, stack, seniority, remote policy, match
 reasons, gaps, and red flags. `--desc` includes the full (stripped,
 plain-text) description.
 
+### `jobhunt tailor <id> [--regen] [--open]`
+
+Generates a tailored CV PDF for one job: runs extraction on demand if the
+job doesn't have one yet, has an LLM select/reorder/lightly reword bullets
+from your master CV to fit the role (never inventing facts — enforced in
+code, not just prompted), and renders it to `~/.jobhunt/out/`.
+
+```
+Tailored CV: /Users/you/.jobhunt/out/acme-backend-engineer-42.pdf (1 page)
+  warning: bullet "exp-acme-2" mentions "Kubernetes", which appears in neither the original bullet nor the master vocabulary
+```
+
+- Without `--regen`, re-running it for the same job just prints the existing PDF's path — no LLM calls.
+- `--regen` tailors again from scratch.
+- `--open` opens the PDF after generating it.
+- Any warning printed means the model tried to add something not in your master CV, and that specific bullet/skill/summary was reverted to your original wording instead — the output PDF is always guaranteed faithful to your master CV, even when the model isn't.
+- Basics (name/contact), education, dates, job titles, and company names always come from `master-cv.yaml` verbatim — the model never writes those.
+
 ### `jobhunt sources list | add <source:board> | remove <source:board> | check`
 
 - `list` — configured targets with their last sync result (ok/error, job count, last fetched).
@@ -142,11 +168,13 @@ plain-text) description.
 5. **Filter**, cheaply, before anything costs money: `maxAgeDays` → `titleExclude` → `titleInclude` → `remoteOnly`/`locationsAllow` → `descriptionExclude`. First failing rule wins and its reason is what `list --all` shows. Every non-closed job is re-checked against the *current* config on each sync, so editing `config.yaml` reclassifies old jobs without a refetch.
 6. **Closed detection**: after a target's fetch *succeeds*, any previously-seen job missing from that response is marked closed. A failed fetch never closes anything — a broken board must never be read as "these jobs are gone."
 7. **Extract & score**: every filter-passed, non-duplicate, non-closed job gets sent to an LLM (job text + your `profile` block — never the full CV) which returns structured requirements and a 0–100 match score via a forced tool call, validated against a strict schema. Results are cached by `(contentHash, promptVersion)`, so unchanged jobs cost nothing on repeat syncs; bumping the prompt version re-extracts everything. Invalid output gets one retry with the validation error appended, then the job is skipped for that run rather than crashing it.
+8. **Tailor**: on request (`jobhunt tailor <id>`), an LLM selects, reorders, and lightly rewords bullets from your master CV — the full master CV (minus contact details) plus the job's extracted requirements go into the prompt this time. A code-level validator then checks every bullet/skill/summary for fabricated numbers, technologies, or ids; anything that still fails after one retry reverts to your original master-CV wording rather than being trusted. The result renders to a single-column PDF via headless Chromium, trimming the least-relevant bullets if it runs over `cv.maxPages`.
 
-All data stays on your machine, in `~/.jobhunt/jobhunt.db` (SQLite) and
-`~/.jobhunt/config.yaml`. Nothing leaves except the job text and your
-profile summary sent to the Anthropic API for scoring — never your CV,
-which isn't used until CV tailoring lands.
+All data stays on your machine, in `~/.jobhunt/jobhunt.db` (SQLite),
+`~/.jobhunt/config.yaml`, and `~/.jobhunt/out/`. What's sent to the
+Anthropic API: job text + your profile summary for scoring, and job text +
+your full master CV (minus `basics`/contact details, re-attached locally
+at render time) for tailoring. Nothing else leaves your machine.
 
 ## Development
 
@@ -170,5 +198,6 @@ src/
 ├─ sources/    # one adapter per ATS, behind a shared JobSource interface
 ├─ jobs/       # normalize, dedupe, filter, extraction, and the sync pipeline
 ├─ llm/        # the only module that imports the Anthropic SDK
+├─ cv/         # master CV schema, tailoring, anti-fabrication validator, PDF rendering
 └─ commands/   # thin CLI commands — parse args, call a service, print
 ```

@@ -8,19 +8,6 @@ machine — not a product, no server, no multi-user support.
 The tool never applies to anything on its own. It's a research and tracking
 aid: `sync` finds and scores jobs, you decide what to do next.
 
-## Status
-
-| Phase | What it adds | Status |
-|---|---|---|
-| 0 | Project scaffold, `jobhunt init` | ✅ |
-| 1 | Greenhouse adapter, sync/list/show/sources | ✅ |
-| 2 | Lever + Ashby adapters, real filtering, closed-job detection | ✅ |
-| 3 | LLM match scoring (`ExtractorService`), cached by content hash | ✅ |
-| 4 | CV tailoring + PDF generation (`jobhunt tailor`) | ✅ |
-| 5 | Apply flow + status tracking (`apply`, `status`, `dismiss`, `stats`) | ✅ |
-| 6 | Remote-board sources (Remotive, RemoteOK, We Work Remotely) | ✅ |
-| 7 | Docs, scheduling examples, polish | ✅ |
-
 ## Requirements
 
 - Node.js 20+ (developed against 22)
@@ -306,7 +293,7 @@ src/
 
 ## Roadmap
 
-Ideas beyond the original 7 phases, roughly in likely order:
+Ideas beyond what's built today, roughly in likely order:
 
 1. **Multi-provider LLM support.** Right now `llm/llm.service.ts` is a thin wrapper around the Anthropic SDK specifically — model IDs in `config.yaml` (`llm.extractionModel`, `llm.tailorModel`) are Claude-specific, and `LlmService.callStructured()` is built around Anthropic's tool-use API shape. Making this provider-agnostic (OpenAI, Gemini, local models via Ollama, etc.) means introducing a provider-neutral interface for "structured output from a prompt + schema" and an adapter per provider, similar in spirit to how `JobSource` abstracts ATS/aggregator differences today. Not started — flagging it here as the next thing worth designing before building.
 2. Additional ATS adapters (Workable, SmartRecruiters) via the existing `JobSource` interface.
@@ -316,4 +303,4 @@ Ideas beyond the original 7 phases, roughly in likely order:
 6. Daily digest delivery (email/Slack) built on the existing `list --format md`.
 7. Saved searches / multiple profiles (e.g. a "backend" profile and a "full-stack" profile scored separately against the same job pool).
 
-None of these are started. The codebase intentionally stays at "7 phases, done" until one of these gets picked up as its own scoped piece of work.
+None of these are started — this list exists so a future scoped piece of work has somewhere to start from, not as a commitment.

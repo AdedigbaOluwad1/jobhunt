@@ -19,7 +19,7 @@ aid: `sync` finds and scores jobs, you decide what to do next.
 | 4 | CV tailoring + PDF generation (`jobhunt tailor`) | ✅ |
 | 5 | Apply flow + status tracking (`apply`, `status`, `dismiss`, `stats`) | ✅ |
 | 6 | Remote-board sources (Remotive, RemoteOK, We Work Remotely) | ✅ |
-| 7 | Docs, scheduling examples, polish | not started |
+| 7 | Docs, scheduling examples, polish | ✅ |
 
 ## Requirements
 
@@ -90,6 +90,50 @@ unique `id`; tailoring references bullets by id, and ids should never
 change once you've used them. `cv.maxBulletsPerRole` and `cv.maxPages` in
 config.yaml control how aggressively tailoring trims content to fit.
 
+### Configuration reference
+
+Every key in `config.yaml` is validated at startup (`.strict()` — an unknown
+key is an error, not a silent typo). The full field list:
+
+| Key | Type | Default | Purpose |
+|---|---|---|---|
+| `profile.summary` | string | — | Short self-description sent to the LLM for match scoring only (never the full CV). |
+| `profile.yearsExperience` | number | — | Used in the seniority/years-fit part of the match score. |
+| `profile.targetTitles` | string[] | — | Informational context for the LLM; not a hard filter. |
+| `profile.mustHaveSkills` | string[] | — | Informational context for the LLM; not a hard filter. |
+| `profile.dealbreakers` | string[] | — | Phrases the LLM treats as an automatic score penalty. |
+| `sources.greenhouse` | string[] | `[]` | Greenhouse board tokens (`boards-api.greenhouse.io/v1/boards/<token>`). |
+| `sources.lever` | string[] | `[]` | Lever company slugs (`api.lever.co`). |
+| `sources.lever_eu` | string[] | `[]` | Lever slugs hosted on `api.eu.lever.co` instead. |
+| `sources.ashby` | string[] | `[]` | Ashby job board names (`api.ashbyhq.com`). |
+| `sources.companyNames` | map<string,string> | — | Optional slug → display-name override, e.g. `{ figma: "Figma, Inc." }`. |
+| `sources.remote.remotive.enabled` | boolean | — | Turn the Remotive adapter on/off. |
+| `sources.remote.remotive.categories` | string[] | `[software-dev]` | Remotive category filter (one sync target per category). |
+| `sources.remote.remotive.minIntervalHours` | number | `12` | Minimum hours between real fetches of this source; a sooner `sync` skips it. |
+| `sources.remote.remoteok.enabled` | boolean | — | Turn the RemoteOK adapter on/off. |
+| `sources.remote.remoteok.minIntervalHours` | number | `12` | Same throttle, for RemoteOK. |
+| `sources.remote.wwr.enabled` | boolean | — | Turn the We Work Remotely adapter on/off. |
+| `sources.remote.wwr.feeds` | string[] | `[remote-programming-jobs]` | WWR RSS category feed names (one sync target per feed). |
+| `sources.remote.wwr.minIntervalHours` | number | `12` | Same throttle, for WWR. |
+| `filters.titleInclude` | string[] | — | Word-boundary match; title must match at least one (skipped if empty). |
+| `filters.titleExclude` | string[] | — | Word-boundary match; any match rejects the job. Checked before `titleInclude`. |
+| `filters.remoteOnly` | boolean | — | Reject any job not detected as remote. |
+| `filters.locationsAllow` | string[] | — | Substring allowlist for a **non-remote** job's location text (see "How it works" below). |
+| `filters.descriptionExclude` | string[] | — | Lowercased substring match anywhere in the description; any match rejects the job. |
+| `filters.maxAgeDays` | number | — | Reject a job older than this if `postedAt` is known (unknown `postedAt` always passes). |
+| `llm.extractionModel` | string | — | Model used for the cheap, high-volume scoring step. |
+| `llm.tailorModel` | string | — | Model used for the more expensive CV-tailoring step. |
+| `llm.maxDescriptionChars` | number | — | Description text is truncated to this length before being sent to the LLM. |
+| `llm.extractionConcurrency` | number | — | Max concurrent extraction calls per `sync`. |
+| `sync.httpConcurrency` | number | — | Max concurrent HTTP fetches across all sources per `sync`. |
+| `sync.httpTimeoutMs` | number | — | Per-request timeout for source fetches. |
+| `sync.httpRetries` | number | — | Retries on network error/429/5xx, with backoff; other 4xx never retry. |
+| `sync.maxExtractPerRun` | number | — | Default cap on (re-)extractions per `sync` (override with `--max-extract`). |
+| `sync.minScoreToHighlight` | number | — | Newly-inserted jobs scoring at or above this show in sync's "New matches ≥ N" list. |
+| `cv.maxPages` | number | — | `jobhunt tailor` drops the least-relevant bullet and re-renders until the PDF fits this many pages. |
+| `cv.maxBulletsPerRole` | number | — | Upper bound the tailoring prompt is told to respect per role/project. |
+| `cv.paper` | `A4` \| `Letter` | — | PDF page size. |
+
 ## Commands
 
 ### `jobhunt init`
@@ -109,12 +153,18 @@ Sources: 3 ok, 1 failed (lever:foo — board not found (404); check the slug in 
 Fetched 1120 jobs → 37 new, 12 changed, 21 closed, 3 duplicates
 Filtered: 29 passed, 8 rejected (top reasons: title-no-match ×5, not-remote ×3)
 Extracted 27 (2 failed)
+
+New matches ≥ 70:
+id    score  company  title                                   location
+#412  92     Acme     Senior Backend Engineer (TypeScript)     remote
+#415  81     Globex   Full Stack Engineer                      EMEA
 ```
 
 - `--source greenhouse` or `--source greenhouse:stripe` limits the run to one source or one board.
 - `--dry-run` fetches and diffs in memory without writing anything (skips extraction too).
 - `--no-extract` skips the LLM scoring step for this run.
 - `--max-extract <n>` caps how many jobs get (re-)extracted this run (default `sync.maxExtractPerRun` in config.yaml).
+- Newly-inserted jobs scoring at or above `sync.minScoreToHighlight` get called out in a "New matches" list at the end — a quick signal for what's worth a look before you even run `list`.
 - The remote-board sources (Remotive, RemoteOK, WWR) are throttled by their own `minIntervalHours` — a sync within that window skips them and says so, rather than re-fetching.
 - If `ANTHROPIC_API_KEY` isn't set, extraction is skipped with one clear line (`Extraction skipped: ANTHROPIC_API_KEY not set (N job(s) waiting)`) — the rest of the sync still runs and succeeds.
 - Exit codes: `0` full success, `2` some sources failed (partial success), `1` fatal error (bad config, db error).
@@ -215,17 +265,30 @@ Anthropic API: job text + your profile summary for scoring, and job text +
 your full master CV (minus `basics`/contact details, re-attached locally
 at render time) for tailoring. Nothing else leaves your machine.
 
+## Scheduling
+
+jobhunt has no built-in scheduler — run `jobhunt sync` on whatever schedule
+you like via cron or launchd. It's always safe to run more often than
+necessary: remote-board sources self-throttle via `minIntervalHours`, and
+every upsert is idempotent. See [`docs/SCHEDULING.md`](docs/SCHEDULING.md)
+for cron and launchd examples, including a gotcha specific to nvm/fnm/volta
+users (scheduled jobs don't load your shell profile, so `node`/`jobhunt`
+may not resolve the way they do in your terminal).
+
 ## Development
 
 ```sh
-npm run build   # prisma generate + nest build
-npm test        # jest — fixture-based, no live network
-npm run lint    # tsc --noEmit
+npm run build    # prisma generate + nest build
+npm test         # jest — fixture-based, no live network
+npm run test:live  # opt-in: one real request per adapter, to catch upstream API drift
+npm run lint     # tsc --noEmit
 ```
 
 Adapter tests run against real API responses saved under `test/fixtures/`,
 captured once and committed rather than hitting the network on every test
-run.
+run. `test:live` is the exception — it's excluded from the default `npm
+test` run and exists specifically to catch a source's API/feed shape
+changing since those fixtures were captured.
 
 ## Project layout
 
@@ -240,3 +303,17 @@ src/
 ├─ cv/         # master CV schema, tailoring, anti-fabrication validator, PDF rendering
 └─ commands/   # thin CLI commands — parse args, call a service, print
 ```
+
+## Roadmap
+
+Ideas beyond the original 7 phases, roughly in likely order:
+
+1. **Multi-provider LLM support.** Right now `llm/llm.service.ts` is a thin wrapper around the Anthropic SDK specifically — model IDs in `config.yaml` (`llm.extractionModel`, `llm.tailorModel`) are Claude-specific, and `LlmService.callStructured()` is built around Anthropic's tool-use API shape. Making this provider-agnostic (OpenAI, Gemini, local models via Ollama, etc.) means introducing a provider-neutral interface for "structured output from a prompt + schema" and an adapter per provider, similar in spirit to how `JobSource` abstracts ATS/aggregator differences today. Not started — flagging it here as the next thing worth designing before building.
+2. Additional ATS adapters (Workable, SmartRecruiters) via the existing `JobSource` interface.
+3. Regional job-board adapters (would need HTML scraping, out of scope for the sources built so far).
+4. Assisted form pre-fill for `apply` (Playwright-driven, always human-submitted — never full auto-apply).
+5. Cover-letter generation using a job's `requirementMap`.
+6. Daily digest delivery (email/Slack) built on the existing `list --format md`.
+7. Saved searches / multiple profiles (e.g. a "backend" profile and a "full-stack" profile scored separately against the same job pool).
+
+None of these are started. The codebase intentionally stays at "7 phases, done" until one of these gets picked up as its own scoped piece of work.

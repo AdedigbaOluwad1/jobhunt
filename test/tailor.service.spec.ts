@@ -93,7 +93,7 @@ describe('TailorService', () => {
   }
 
   function makeTailorService(callStructured: jest.Mock): TailorService {
-    const llmService = { hasApiKey: () => true, callStructured } as unknown as LlmService;
+    const llmService = { isConfigured: () => true, describeMissingConfig: () => 'ANTHROPIC_API_KEY not set', callStructured } as unknown as LlmService;
     const extractorService = new ExtractorService(configService, jobsRepository, llmService);
     return new TailorService(configService, jobsRepository, masterCvService, extractorService, llmService, renderService);
   }

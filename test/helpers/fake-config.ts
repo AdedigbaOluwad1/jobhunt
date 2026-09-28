@@ -24,8 +24,8 @@ export function makeTestConfig(overrides: Partial<AppConfig> = {}): AppConfig {
       maxAgeDays: 30,
     },
     llm: {
-      extractionModel: 'claude-haiku-4-5-20251001',
-      tailorModel: 'claude-sonnet-5',
+      extractionModel: 'anthropic/claude-haiku-4-5-20251001',
+      tailorModel: 'anthropic/claude-sonnet-5',
       maxDescriptionChars: 12000,
       extractionConcurrency: 3,
     },

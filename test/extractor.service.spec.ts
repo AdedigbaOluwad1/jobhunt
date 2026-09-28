@@ -31,8 +31,8 @@ function usage() {
   return { inputTokens: 100, outputTokens: 50 };
 }
 
-function fakeLlm(callStructured: jest.Mock, hasApiKey = true): LlmService {
-  return { hasApiKey: () => hasApiKey, callStructured } as unknown as LlmService;
+function fakeLlm(callStructured: jest.Mock, isConfigured = true): LlmService {
+  return { isConfigured: () => isConfigured, describeMissingConfig: () => 'ANTHROPIC_API_KEY not set', callStructured } as unknown as LlmService;
 }
 
 describe('ExtractorService', () => {

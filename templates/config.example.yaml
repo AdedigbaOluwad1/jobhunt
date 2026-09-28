@@ -27,10 +27,19 @@ filters:
   maxAgeDays: 30
 
 llm:
-  extractionModel: claude-haiku-4-5-20251001   # cheap, high volume; verify current model IDs in Anthropic docs
-  tailorModel: claude-sonnet-5                 # better writing; verify current model IDs
+  # Models are "<provider>/<model>": anthropic, openai, ollama (Ollama's native API —
+  # preferred for Ollama, since it's the only one that can turn off "thinking" on
+  # thinking-capable models), or local (any OTHER OpenAI-compatible local server —
+  # LM Studio, vLLM, llama.cpp server). Mix providers freely — e.g. a local model
+  # for high-volume extraction, a hosted one for tailoring.
+  extractionModel: anthropic/claude-haiku-4-5-20251001   # cheap, high volume; verify current model IDs in Anthropic docs
+  tailorModel: anthropic/claude-sonnet-5                 # better writing; verify current model IDs
   maxDescriptionChars: 12000
   extractionConcurrency: 3
+  # providers:
+  #   openai: { baseUrl: https://api.openai.com/v1 }        # only needed to point at a proxy
+  #   ollama: { baseUrl: http://localhost:11434, think: false }  # think: false is the default; set true for a reasoning pass
+  #   local:  { baseUrl: http://localhost:1234/v1 }         # any other OpenAI-compatible runtime
 
 sync:
   httpConcurrency: 5

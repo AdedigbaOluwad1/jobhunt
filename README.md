@@ -16,6 +16,7 @@ automatically; the tool prepares everything and hands control back to you.
 - [Requirements](#requirements)
 - [Installation](#installation)
 - [Configuration](#configuration)
+  - [LLM providers](#llm-providers)
   - [Configuration reference](#configuration-reference)
 - [Commands](#commands)
 - [Architecture](#architecture)
@@ -45,7 +46,11 @@ automatically; the tool prepares everything and hands control back to you.
 - **Full status tracking** — from first seen through applied, interview,
   offer, or rejected, with weekly stats.
 - **Local-first** — one SQLite database, no external services beyond the
-  Anthropic API calls you explicitly opt into.
+  LLM calls you explicitly opt into.
+- **Multi-provider LLM support** — Anthropic, OpenAI, or an open-weight model
+  running locally (Ollama's native API, or any OpenAI-compatible server —
+  LM Studio, vLLM, llama.cpp server), mixed freely between extraction and
+  tailoring.
 
 ## Requirements
 
@@ -53,11 +58,12 @@ automatically; the tool prepares everything and hands control back to you.
 |---|---|
 | Node.js | 20 or later |
 | npm | any recent version |
-| Anthropic API key | required for match scoring and CV tailoring only |
+| An LLM | required for match scoring and CV tailoring only — a hosted API key (Anthropic, OpenAI) or a local model server (e.g. Ollama) |
 | Chromium | required for CV tailoring only (`npx playwright install chromium`) |
 
 Every command other than `sync`'s extraction step and `tailor` works with
-no API key configured.
+no LLM configured. Using a local model needs no API key at all — see
+[LLM providers](#llm-providers).
 
 ## Installation
 
@@ -77,7 +83,7 @@ jobhunt init
 ~/.jobhunt/
 ├── config.yaml      Source watchlist, filters, profile, and runtime settings
 ├── master-cv.yaml   Your CV — the single source of truth for tailoring
-├── .env             ANTHROPIC_API_KEY
+├── .env             ANTHROPIC_API_KEY / OPENAI_API_KEY (only for providers you use)
 ├── jobhunt.db       SQLite database
 └── out/             Generated CV PDFs and their JSON source
 ```
@@ -126,8 +132,8 @@ filters:
   maxAgeDays: 21
 
 llm:
-  extractionModel: claude-haiku-4-5-20251001   # verify current model IDs in Anthropic docs
-  tailorModel: claude-sonnet-5
+  extractionModel: anthropic/claude-haiku-4-5-20251001   # verify current model IDs in Anthropic docs
+  tailorModel: anthropic/claude-sonnet-5
   maxDescriptionChars: 12000
   extractionConcurrency: 3
 
@@ -148,6 +154,52 @@ Every source slug above (`stripe`, `figma`, `veeva`, `linear`, `ramp`) is a
 real, currently active board — this file works as-is if you drop it in and
 run `jobhunt sync`. See [Configuration reference](#configuration-reference)
 below for every field.
+
+### LLM providers
+
+`llm.extractionModel` and `llm.tailorModel` are each `"<provider>/<model>"`,
+and the two fields can point at different providers — for example a local
+model for high-volume extraction and a hosted one for tailoring:
+
+| Provider | Example model value | Credentials |
+|---|---|---|
+| `anthropic` | `anthropic/claude-haiku-4-5-20251001` | `ANTHROPIC_API_KEY` in `.env` or the environment |
+| `openai` | `openai/gpt-4o-mini` | `OPENAI_API_KEY` in `.env` or the environment |
+| `ollama` | `ollama/qwen3.6:latest` | none required |
+| `local` | `local/llama3.1` | none required |
+
+**`ollama`** talks to [Ollama](https://ollama.com)'s native `/api/chat`
+directly (not its OpenAI-compatible endpoint) and defaults to Ollama's
+default address, `http://localhost:11434`. Use this one for anything served
+through Ollama — including thinking-capable models. Only the native API can
+turn thinking off, via `think: false` (the default here); the
+OpenAI-compatible endpoint silently ignores that setting and burns
+substantially more tokens per call on hidden reasoning it never asked to
+see. Override the address, or opt back into thinking, with:
+
+```yaml
+llm:
+  providers:
+    ollama: { baseUrl: http://localhost:11434, think: false }
+```
+
+**`local`** is the fallback for any OTHER OpenAI-compatible local server —
+LM Studio, vLLM, llama.cpp server — that Ollama's native API doesn't cover.
+It defaults to Ollama's OpenAI-compatible address
+(`http://localhost:11434/v1`) as a reasonable starting point, but for Ollama
+itself prefer `ollama` above. Point it elsewhere with:
+
+```yaml
+llm:
+  providers:
+    local: { baseUrl: http://localhost:1234/v1 }
+```
+
+`llm.providers.openai.baseUrl` works the same way, for routing OpenAI-shaped
+calls through a proxy. Structured output (match scoring, CV tailoring) is
+implemented with tool/function calling, so a local model needs reasonably
+capable tool-calling support (e.g. Llama 3.1+, Qwen2.5+) — smaller or
+older models may fail to produce a valid tool call.
 
 ### Example: `master-cv.yaml`
 
@@ -258,10 +310,14 @@ key is a startup error, not a silent no-op.
 | `filters.locationsAllow` | string[] | — | Substring allowlist, applied only to non-remote jobs' location text. |
 | `filters.descriptionExclude` | string[] | — | Case-insensitive substring match anywhere in the description. |
 | `filters.maxAgeDays` | number | — | Reject a job older than this when `postedAt` is known. |
-| `llm.extractionModel` | string | — | Model used for match scoring. |
-| `llm.tailorModel` | string | — | Model used for CV tailoring. |
+| `llm.extractionModel` | string | — | Model used for match scoring, as `"<provider>/<model>"`. See [LLM providers](#llm-providers). |
+| `llm.tailorModel` | string | — | Model used for CV tailoring, as `"<provider>/<model>"`. |
 | `llm.maxDescriptionChars` | number | — | Description truncation length before sending to the LLM. |
 | `llm.extractionConcurrency` | number | — | Max concurrent extraction calls per sync. |
+| `llm.providers.openai.baseUrl` | string | OpenAI's API | Overrides the OpenAI API base URL, e.g. to route through a proxy. |
+| `llm.providers.ollama.baseUrl` | string | `http://localhost:11434` | Overrides Ollama's native API address. |
+| `llm.providers.ollama.think` | boolean | `false` | Passed as Ollama's native `think` option; `false` skips hidden reasoning on thinking-capable models. |
+| `llm.providers.local.baseUrl` | string | `http://localhost:11434/v1` | Overrides the local OpenAI-compatible server's base URL (LM Studio, vLLM, llama.cpp server, …). |
 | `sync.httpConcurrency` | number | — | Max concurrent HTTP fetches per sync. |
 | `sync.httpTimeoutMs` | number | — | Per-request timeout. |
 | `sync.httpRetries` | number | — | Retries on network error, 429, or 5xx, with backoff. |
@@ -477,8 +533,10 @@ jobhunt sync → jobhunt list → jobhunt show <id> → jobhunt tailor <id> → 
 
 All data is stored locally: `~/.jobhunt/jobhunt.db` (SQLite),
 `~/.jobhunt/config.yaml`, and `~/.jobhunt/out/`. The only external calls
-are to the Anthropic API — job text and your profile summary for scoring,
-job text and your master CV (minus contact details) for tailoring.
+are to whichever LLM provider is configured (see [LLM providers](#llm-providers),
+none at all if both models point at `local`) — job text and your profile
+summary for scoring, job text and your master CV (minus contact details)
+for tailoring.
 
 ## Scheduling
 
@@ -512,18 +570,13 @@ src/
 ├── db/        Prisma client and the single repository all data access goes through
 ├── sources/   One adapter per source, behind a shared interface
 ├── jobs/      Normalization, deduplication, filtering, extraction, and the sync pipeline
-├── llm/       Anthropic SDK integration
+├── llm/       Multi-provider LLM integration (Anthropic, OpenAI, Ollama native, OpenAI-compatible local)
 ├── cv/        Master CV schema, tailoring, fabrication validator, PDF rendering
 └── commands/  CLI command definitions
 ```
 
 ## Roadmap
 
-- **Multi-provider LLM support.** `llm/llm.service.ts` currently targets
-  the Anthropic API directly, and model configuration is Claude-specific.
-  Generalizing this requires a provider-neutral interface for structured
-  output plus one adapter per provider, following the same pattern as the
-  source adapters.
 - Additional ATS adapters (Workable, SmartRecruiters).
 - Regional job boards requiring HTML scraping.
 - Assisted, human-submitted form pre-fill for `apply`.

@@ -62,12 +62,37 @@ const FiltersSchema = z
   })
   .strict();
 
+const ProviderOverrideSchema = z
+  .object({
+    /** Overrides the provider's default API base URL, e.g. to point "local" at LM Studio or vLLM instead of Ollama. */
+    baseUrl: z.string().optional(),
+  })
+  .strict();
+
+const OllamaProviderOverrideSchema = z
+  .object({
+    baseUrl: z.string().optional(),
+    /** Passed as Ollama's native `think` option. Defaults to false: for structured extraction/tailoring, hidden reasoning only adds latency and token cost. */
+    think: z.boolean().optional(),
+  })
+  .strict();
+
 const LlmSchema = z
   .object({
+    // "<provider>/<model>", e.g. "anthropic/claude-haiku-4-5-20251001", "openai/gpt-4o-mini",
+    // "local/llama3.1" (any OpenAI-compatible local server), "ollama/qwen3.6:latest" (Ollama's native API).
     extractionModel: z.string(),
     tailorModel: z.string(),
     maxDescriptionChars: z.number().int().positive(),
     extractionConcurrency: z.number().int().positive(),
+    providers: z
+      .object({
+        openai: ProviderOverrideSchema.optional(),
+        local: ProviderOverrideSchema.optional(),
+        ollama: OllamaProviderOverrideSchema.optional(),
+      })
+      .strict()
+      .optional(),
   })
   .strict();
 

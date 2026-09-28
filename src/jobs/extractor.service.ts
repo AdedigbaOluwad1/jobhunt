@@ -43,10 +43,10 @@ export class ExtractorService {
       return { ...EMPTY_STATS };
     }
 
-    if (!this.llmService.hasApiKey()) {
+    if (!this.llmService.isConfigured(config.llm.extractionModel)) {
       return {
         ...EMPTY_STATS,
-        skippedReason: `ANTHROPIC_API_KEY not set (${candidates.length} job(s) waiting for extraction)`,
+        skippedReason: `${this.llmService.describeMissingConfig(config.llm.extractionModel)} (${candidates.length} job(s) waiting for extraction)`,
       };
     }
 
@@ -82,8 +82,9 @@ export class ExtractorService {
     if (upToDate) {
       return job;
     }
-    if (!this.llmService.hasApiKey()) {
-      throw new AppError('CONFIG_MISSING', 'ANTHROPIC_API_KEY not set; cannot extract requirements for tailoring.');
+    const config = this.configService.load();
+    if (!this.llmService.isConfigured(config.llm.extractionModel)) {
+      throw new AppError('CONFIG_MISSING', `${this.llmService.describeMissingConfig(config.llm.extractionModel)} Cannot extract requirements for tailoring.`);
     }
     await this.extractOne(job);
     const refreshed = await this.jobsRepository.findById(jobId);

@@ -1,109 +1,57 @@
-import * as fs from 'node:fs';
 import { Injectable } from '@nestjs/common';
-import Anthropic from '@anthropic-ai/sdk';
-import { parse as parseDotenv } from 'dotenv';
-import { z } from 'zod';
 import { AppError } from '../common/errors';
-import { envPath } from '../common/paths';
+import { AnthropicProvider } from './anthropic.provider';
+import { LocalProvider } from './local.provider';
+import { OllamaProvider } from './ollama.provider';
+import { OpenAiProvider } from './openai.provider';
+import { LlmProvider, PROVIDER_NAMES, ProviderName, StructuredCallInput, StructuredCallResult } from './provider.interface';
 
-export class LlmValidationError extends Error {
-  constructor(
-    public readonly zodError: z.ZodError,
-    public readonly rawInput: unknown,
-  ) {
-    super(`model output failed schema validation: ${zodError.issues.map((i) => `${i.path.join('.')}: ${i.message}`).join('; ')}`);
-    this.name = 'LlmValidationError';
-  }
-}
+export { LlmValidationError, StructuredCallInput, StructuredCallResult } from './provider.interface';
 
-export interface StructuredCallInput<T> {
+interface ParsedModel {
+  provider: ProviderName;
   model: string;
-  system: string;
-  user: string;
-  toolName: string;
-  toolDescription: string;
-  schema: z.ZodType<T>;
-  maxTokens?: number;
-}
-
-export interface StructuredCallResult<T> {
-  data: T;
-  usage: { inputTokens: number; outputTokens: number };
 }
 
 /**
- * Thin wrapper over the Anthropic SDK — the only place in the app that
- * imports it. Structured output is forced via a single-tool tool_choice;
- * the JSON schema handed to the API is derived straight from the same zod
- * schema used to validate the response, so there's one source of truth.
+ * Routes a "<provider>/<model>" id (e.g. `anthropic/claude-haiku-4-5-20251001`,
+ * `openai/gpt-4o-mini`, `local/llama3.1`) to the matching provider adapter.
+ * This is the only place in the app that knows the provider list.
  */
 @Injectable()
 export class LlmService {
-  private client?: Anthropic;
+  private readonly providers: Record<ProviderName, LlmProvider>;
 
-  async callStructured<T>(input: StructuredCallInput<T>): Promise<StructuredCallResult<T>> {
-    const client = this.getClient();
-    const { $schema: _drop, ...inputSchema } = z.toJSONSchema(input.schema) as Record<string, unknown>;
-
-    const message = await client.messages.create({
-      model: input.model,
-      max_tokens: input.maxTokens ?? 1536,
-      system: input.system,
-      messages: [{ role: 'user', content: input.user }],
-      tools: [
-        {
-          name: input.toolName,
-          description: input.toolDescription,
-          input_schema: inputSchema as Anthropic.Tool.InputSchema,
-          strict: true,
-        },
-      ],
-      tool_choice: { type: 'tool', name: input.toolName },
-      cache_control: { type: 'ephemeral' },
-    });
-
-    const toolUse = message.content.find(
-      (block): block is Anthropic.ToolUseBlock => block.type === 'tool_use',
-    );
-    if (!toolUse) {
-      throw new AppError('LLM_INVALID_OUTPUT', 'model did not return a tool call');
-    }
-
-    const parsed = input.schema.safeParse(toolUse.input);
-    if (!parsed.success) {
-      throw new LlmValidationError(parsed.error, toolUse.input);
-    }
-
-    return {
-      data: parsed.data,
-      usage: { inputTokens: message.usage.input_tokens, outputTokens: message.usage.output_tokens },
-    };
+  constructor(anthropic: AnthropicProvider, openai: OpenAiProvider, local: LocalProvider, ollama: OllamaProvider) {
+    this.providers = { anthropic, openai, local, ollama };
   }
 
-  hasApiKey(): boolean {
-    return this.resolveApiKey() !== undefined;
+  callStructured<T>(input: StructuredCallInput<T>): Promise<StructuredCallResult<T>> {
+    const { provider, model } = this.parseModelId(input.model);
+    return this.providers[provider].callStructured({ ...input, model });
   }
 
-  private getClient(): Anthropic {
-    if (this.client) return this.client;
-    this.client = new Anthropic({ apiKey: this.readApiKey() });
-    return this.client;
+  isConfigured(modelId: string): boolean {
+    return this.providers[this.parseModelId(modelId).provider].isConfigured();
   }
 
-  private resolveApiKey(): string | undefined {
-    if (process.env.ANTHROPIC_API_KEY) return process.env.ANTHROPIC_API_KEY;
-    if (fs.existsSync(envPath())) {
-      const parsed = parseDotenv(fs.readFileSync(envPath()));
-      if (parsed.ANTHROPIC_API_KEY) return parsed.ANTHROPIC_API_KEY;
+  describeMissingConfig(modelId: string): string {
+    return this.providers[this.parseModelId(modelId).provider].describeMissingConfig();
+  }
+
+  private parseModelId(modelId: string): ParsedModel {
+    const separatorIndex = modelId.indexOf('/');
+    if (separatorIndex <= 0) {
+      throw new AppError(
+        'CONFIG_INVALID',
+        `model "${modelId}" must be of the form "<provider>/<model>" (e.g. "anthropic/claude-haiku-4-5-20251001"). Supported providers: ${PROVIDER_NAMES.join(', ')}.`,
+      );
     }
-    return undefined;
-  }
-
-  private readApiKey(): string {
-    const key = this.resolveApiKey();
-    if (!key) {
-      throw new AppError('CONFIG_MISSING', `ANTHROPIC_API_KEY not set. Add it to ${envPath()} or the environment.`);
+    const provider = modelId.slice(0, separatorIndex);
+    const model = modelId.slice(separatorIndex + 1);
+    if (!(PROVIDER_NAMES as readonly string[]).includes(provider)) {
+      throw new AppError('CONFIG_INVALID', `unknown LLM provider "${provider}" in model "${modelId}". Supported providers: ${PROVIDER_NAMES.join(', ')}.`);
     }
-    return key;
+    return { provider: provider as ProviderName, model };
   }
 }

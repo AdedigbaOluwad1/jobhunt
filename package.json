@@ -9,6 +9,7 @@
   "scripts": {
     "prebuild": "prisma generate",
     "build": "nest build",
+    "postbuild": "chmod +x dist/main.js",
     "start": "node dist/main.js",
     "dev": "nest start --watch",
     "test": "jest",

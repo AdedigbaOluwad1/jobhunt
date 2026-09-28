@@ -1,4 +1,4 @@
-export type AppErrorCode = 'CONFIG_INVALID' | 'CONFIG_MISSING' | 'SOURCE_FETCH_FAILED';
+export type AppErrorCode = 'CONFIG_INVALID' | 'CONFIG_MISSING' | 'SOURCE_FETCH_FAILED' | 'LLM_INVALID_OUTPUT';
 
 export class AppError extends Error {
   constructor(

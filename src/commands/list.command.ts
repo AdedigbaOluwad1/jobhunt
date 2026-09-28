@@ -7,6 +7,7 @@ interface ListCommandOptions {
   all?: boolean;
   company?: string;
   remote?: boolean;
+  minScore?: number;
   limit?: number;
   format?: 'table' | 'json';
 }
@@ -24,6 +25,7 @@ export class ListCommand extends CommandRunner {
       filterStatus: options.all ? undefined : 'passed',
       company: options.company,
       remote: options.remote,
+      minScore: options.minScore,
       limit: options.limit ?? 20,
     });
 
@@ -35,6 +37,7 @@ export class ListCommand extends CommandRunner {
     printTable(
       [
         { header: 'id', key: 'id' },
+        { header: 'score', key: 'score' },
         { header: 'company', key: 'company' },
         { header: 'title', key: 'title' },
         { header: 'location', key: 'location' },
@@ -44,6 +47,7 @@ export class ListCommand extends CommandRunner {
       ],
       jobs.map((job) => ({
         id: String(job.id),
+        score: job.extraction ? String(job.extraction.matchScore) : '-',
         company: job.company,
         title: job.title,
         location: job.remote ? 'remote' : (job.location ?? ''),
@@ -67,6 +71,11 @@ export class ListCommand extends CommandRunner {
   @Option({ flags: '--remote', description: 'Only remote jobs' })
   parseRemote(): boolean {
     return true;
+  }
+
+  @Option({ flags: '--min-score <n>', description: 'Only jobs with an extraction match score at or above n' })
+  parseMinScore(value: string): number {
+    return Number(value);
   }
 
   @Option({ flags: '--limit <n>', description: 'Max rows to show (default 20)' })

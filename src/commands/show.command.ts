@@ -1,10 +1,38 @@
 import { Command, CommandRunner, Option } from 'nest-commander';
 import { AppError } from '../common/errors';
 import { JobsRepository } from '../db/jobs.repository';
+import type { Extraction } from '../generated/prisma/client';
 
 interface ShowCommandOptions {
   desc?: boolean;
   json?: boolean;
+}
+
+function parseJsonArray(value: string): string[] {
+  const parsed: unknown = JSON.parse(value);
+  return Array.isArray(parsed) ? parsed : [];
+}
+
+function printExtraction(extraction: Extraction): void {
+  console.log('\n--- analysis ---');
+  console.log(`score:    ${extraction.matchScore}`);
+  console.log(`summary:  ${extraction.roleSummary}`);
+  console.log(`seniority: ${extraction.seniority}${extraction.yearsExperienceMin !== null ? ` (${extraction.yearsExperienceMin}+ yrs)` : ''}`);
+  console.log(`remote:   ${extraction.remotePolicy}${extraction.locationRestriction ? ` — ${extraction.locationRestriction}` : ''}`);
+
+  const printList = (label: string, json: string) => {
+    const items = parseJsonArray(json);
+    if (items.length === 0) return;
+    console.log(`${label}:`);
+    for (const item of items) console.log(`  - ${item}`);
+  };
+
+  printList('requirements', extraction.requirements);
+  printList('nice to have', extraction.niceToHave);
+  printList('stack', extraction.stack);
+  printList('match reasons', extraction.matchReasons);
+  printList('gaps', extraction.gaps);
+  printList('red flags', extraction.redFlags);
 }
 
 @Command({ name: 'show', arguments: '<id>', description: 'Show full details for one job' })
@@ -38,6 +66,10 @@ export class ShowCommand extends CommandRunner {
     console.log(`source:   ${job.source}:${job.board}`);
     if (job.duplicateOfId) console.log(`duplicate of: #${job.duplicateOfId}`);
     if (job.closedAt) console.log(`closed:   ${job.closedAt.toISOString().slice(0, 10)}`);
+
+    if (job.extraction) {
+      printExtraction(job.extraction);
+    }
 
     if (options.desc) {
       console.log('\n--- description ---');

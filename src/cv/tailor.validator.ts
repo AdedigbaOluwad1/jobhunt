@@ -108,10 +108,9 @@ export function validateTailoredCv(tailored: TailoredCv, masterCv: MasterCv): Ta
 }
 
 /**
- * Applies the spec's fallback rule: a bullet that still violates after one
- * retry reverts to its original master-CV text verbatim; skills not in the
- * master list are dropped; a summary that still violates falls back to the
- * master CV's own default summary.
+ * A bullet that still violates after a retry reverts to its original
+ * master-CV text verbatim; skills not in the master list are dropped; a
+ * summary that still violates falls back to the master CV's own summary.
  */
 export function applyFallbacks(tailored: TailoredCv, masterCv: MasterCv, violations: TailorViolation[]): TailoredCv {
   const index = indexMasterCv(masterCv);

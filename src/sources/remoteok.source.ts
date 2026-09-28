@@ -21,7 +21,6 @@ const RemoteOkJobSchema = z.object({
   salary_max: z.number().optional(),
 });
 
-// RemoteOK's first array element is a legal/attribution notice, not a job.
 const RemoteOkResponseSchema = z.array(z.unknown()).min(1);
 
 type RemoteOkJob = z.infer<typeof RemoteOkJobSchema>;
@@ -86,7 +85,6 @@ export class RemoteOkSource implements JobSource {
       location: job.location,
       remote: true,
       salaryText: job.salary_min && job.salary_max ? `$${job.salary_min}–$${job.salary_max}` : undefined,
-      // RemoteOK's terms require linking back to their own listing, not the employer's.
       url: job.url,
       applyUrl: job.apply_url ?? job.url,
       descriptionHtml: job.description,

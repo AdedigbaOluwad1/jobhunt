@@ -34,7 +34,6 @@ export interface RawJob {
 
 export interface JobSource {
   readonly name: SourceName;
-  /** List boards/feeds to fetch, from config. */
   targets(): SourceTarget[];
   /** Fetch ALL open jobs for one target. Throws on failure; never returns partial data silently. */
   fetch(target: SourceTarget): Promise<RawJob[]>;

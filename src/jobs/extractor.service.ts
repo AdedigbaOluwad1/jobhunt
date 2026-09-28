@@ -20,7 +20,7 @@ export interface ExtractionStats {
   failed: number;
   inputTokens: number;
   outputTokens: number;
-  /** Set instead of attempting anything when the API key isn't configured (spec 15: fail early, clearly). */
+  /** Set instead of attempting anything when the API key isn't configured. */
   skippedReason?: string;
 }
 
@@ -73,7 +73,6 @@ export class ExtractorService {
     return stats;
   }
 
-  /** Used by `jobhunt tailor` to make sure a job has a current extraction before tailoring against it. */
   async ensureExtraction(jobId: number): Promise<JobWithExtraction> {
     const job = await this.jobsRepository.findById(jobId);
     if (!job) {
@@ -103,8 +102,8 @@ export class ExtractorService {
     try {
       result = await this.callModel(config.llm.extractionModel, system, user);
     } catch (err) {
-      // Retry once with the validation error appended, per spec 10.2 — then let a
-      // second failure propagate to the caller, which counts it and moves on.
+      // One retry with the failure appended; a second failure propagates to the
+      // caller, which counts it and moves on rather than crashing the run.
       const feedback = this.describeFailureForRetry(err);
       result = await this.callModel(config.llm.extractionModel, system, `${user}\n\n${feedback}`);
     }

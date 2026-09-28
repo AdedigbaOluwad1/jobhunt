@@ -74,7 +74,6 @@ export class SourcesAddCommand extends CommandRunner {
       throw new AppError('SOURCE_FETCH_FAILED', `no adapter registered yet for "${source}" (coming in a later phase)`);
     }
 
-    // Verify the board actually exists before touching config.yaml.
     await adapter.fetch({ source: adapterSourceName(source), board });
 
     const result = addSourceTarget(source, board);

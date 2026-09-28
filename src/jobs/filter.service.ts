@@ -24,10 +24,7 @@ function matchesWord(text: string, term: string): boolean {
   return new RegExp(`\\b${escaped}\\b`, 'i').test(text);
 }
 
-/**
- * Deterministic, ordered, cheap filters (spec 9.2) — run before any LLM call.
- * Rules are evaluated in order; the first failing rule wins.
- */
+/** Deterministic, ordered, cheap filters that run before any LLM call — the first failing rule wins. */
 @Injectable()
 export class FilterService {
   constructor(private readonly configService: ConfigService) {}
@@ -55,9 +52,8 @@ export class FilterService {
       return { status: 'rejected', reason: 'not-remote' };
     }
 
-    // locationsAllow only constrains non-remote jobs; a remote job's location text
-    // (often just an HQ address) shouldn't disqualify it. See the config template's
-    // own comment on this field.
+    // locationsAllow only constrains non-remote jobs — a remote job's location text
+    // is often just an HQ address and shouldn't disqualify it.
     if (!job.remote && job.location) {
       const locationLower = job.location.toLowerCase();
       const allowed = filters.locationsAllow.some((term) => locationLower.includes(term.toLowerCase()));

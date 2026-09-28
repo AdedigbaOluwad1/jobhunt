@@ -40,10 +40,6 @@ export function collapseWhitespace(input: string): string {
   return input.replace(/\s+/g, ' ').trim();
 }
 
-/**
- * Some ATS APIs (Greenhouse) entity-escape their own HTML, so the real tags
- * only appear after one decode pass — see decodeHtmlEntities.
- */
 export function stripHtml(html: string): string {
   return convert(decodeHtmlEntities(html), { wordwrap: false });
 }

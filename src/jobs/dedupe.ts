@@ -8,11 +8,11 @@ export interface DuplicateResolution {
 }
 
 /**
- * Cross-source duplicate resolution (spec 9.1 step 5): when a newly inserted
- * job shares a dedupeKey with an existing non-closed job from a different
- * (source, board), the ATS listing wins — if the new job is ATS-sourced and
- * the existing match came from a remote-board aggregator, the existing entry
- * gets repointed at the new one instead of the other way around.
+ * When a newly inserted job shares a dedupeKey with an existing non-closed
+ * job from a different (source, board), the ATS listing wins: if the new job
+ * is ATS-sourced and the existing match came from a remote-board aggregator,
+ * the existing entry gets repointed at the new one instead of the other way
+ * around.
  */
 export function resolveDuplicate(
   newJob: { source: string },

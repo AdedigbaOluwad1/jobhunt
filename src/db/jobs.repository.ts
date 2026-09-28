@@ -129,7 +129,6 @@ export class JobsRepository {
     return this.prisma.job.findUnique({ where: { source_board_externalId: { source, board, externalId } } });
   }
 
-  /** Another non-closed job with the same dedupeKey from a different (source, board), if any. */
   async findDuplicateCandidate(
     dedupeKey: string,
     excludeSource: string,
@@ -234,7 +233,6 @@ export class JobsRepository {
     return this.prisma.sourceState.findUnique({ where: { source_board: { source, board } } });
   }
 
-  /** Every non-closed job, for re-running filters against the current config (spec 9.2). */
   async findAllNonClosed(): Promise<Job[]> {
     return this.prisma.job.findMany({ where: { closedAt: null } });
   }
@@ -325,7 +323,6 @@ export class JobsRepository {
     });
   }
 
-  /** Sets appliedAt on the most recent Application for this job, if it isn't already set. */
   async markLatestApplicationApplied(jobId: number): Promise<void> {
     const application = await this.findApplicationByJobId(jobId);
     if (application && !application.appliedAt) {

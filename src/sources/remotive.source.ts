@@ -86,7 +86,6 @@ export class RemotiveSource implements JobSource {
       department: job.category,
       employmentType: job.job_type,
       salaryText: job.salary || undefined,
-      // Remotive's terms require linking back to their own listing, not the employer's.
       url: job.url,
       applyUrl: job.url,
       descriptionHtml: job.description,

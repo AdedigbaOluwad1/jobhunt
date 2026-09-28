@@ -5,9 +5,8 @@ import { AppError } from '../common/errors';
 const PAGE_MARKER = /\/Type\s*\/Page[^s]/g;
 
 /**
- * One Chromium instance per command run (Nest tears this down via
- * onModuleDestroy when the CLI's app context closes after the command
- * finishes), per spec 11.4.
+ * One Chromium instance per command run — Nest tears this down via
+ * onModuleDestroy when the CLI's app context closes after the command finishes.
  */
 @Injectable()
 export class RenderService implements OnModuleDestroy {

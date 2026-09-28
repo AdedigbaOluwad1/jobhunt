@@ -15,8 +15,8 @@ function formatDateRange(start: string, end: string | null): string {
 
 /**
  * Single-column, system-fonts, no icons/tables/images: ATS parsers read this
- * shape most reliably (spec 11.4). Basics/education/dates/titles/company
- * names are taken straight from the master CV, never from the model.
+ * shape most reliably. Basics/education/dates/titles/company names are taken
+ * straight from the master CV, never from the model.
  */
 export function renderCvHtml(masterCv: MasterCv, tailored: TailoredCv): string {
   const { basics, education } = masterCv;

@@ -1,8 +1,16 @@
 {
   "name": "jobhunt",
   "version": "0.1.0",
-  "description": "Personal CLI that finds, scores and helps you apply to matching jobs.",
+  "description": "CLI that syncs job postings from ATS boards and remote-job aggregators, scores them against your profile with an LLM, and generates fact-checked, tailored CVs.",
+  "keywords": ["cli", "job-search", "ats", "llm", "cv", "resume"],
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/AdedigbaOluwad1/jobhunt"
+  },
   "private": true,
+  "engines": {
+    "node": ">=20"
+  },
   "bin": {
     "jobhunt": "dist/main.js"
   },

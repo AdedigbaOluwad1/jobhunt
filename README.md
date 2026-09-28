@@ -1,21 +1,65 @@
 # jobhunt
 
-A personal CLI that pulls open job postings from a watchlist of companies'
-ATS boards, filters out obvious mismatches for free, and uses an LLM to
-score how well each one fits you. Built for one person to run on their own
-machine — not a product, no server, no multi-user support.
+A command-line tool that syncs open job postings from a configurable
+watchlist of ATS boards and remote-job aggregators, filters out obvious
+mismatches, scores the rest against your profile with an LLM, and generates
+a tailored, fact-checked CV for the ones worth applying to.
 
-The tool never applies to anything on its own. It's a research and tracking
-aid: `sync` finds and scores jobs, you decide what to do next.
+Single-user by design: no server, no hosted deployment, no shared state.
+Everything — job data, your CV, generated PDFs — lives in one local SQLite
+database and a couple of YAML files. Applications are never submitted
+automatically; the tool prepares everything and hands control back to you.
+
+## Contents
+
+- [Features](#features)
+- [Requirements](#requirements)
+- [Installation](#installation)
+- [Configuration](#configuration)
+  - [Configuration reference](#configuration-reference)
+- [Commands](#commands)
+- [Architecture](#architecture)
+- [Scheduling](#scheduling)
+- [Testing](#testing)
+- [Project structure](#project-structure)
+- [Roadmap](#roadmap)
+- [License](#license)
+
+## Features
+
+- **Multi-source aggregation** — Greenhouse, Lever, and Ashby boards, plus
+  Remotive, RemoteOK, and We Work Remotely, unified behind one adapter
+  interface.
+- **Deterministic filtering** — title/location/age/description rules run
+  before any LLM call, so cost scales with what actually matters.
+- **Cross-source deduplication** — the same posting found on an ATS board
+  and a remote-job aggregator resolves to one record, with the ATS listing
+  as the source of truth.
+- **LLM-scored matches** — structured extraction and a 0–100 match score
+  per posting, cached by content hash so nothing is re-scored unless it
+  changed.
+- **Fact-checked CV tailoring** — an LLM selects and lightly rewords bullets
+  from your master CV; a deterministic validator rejects anything it can't
+  verify against the source material, with no manual review required to
+  catch fabrication.
+- **Full status tracking** — from first seen through applied, interview,
+  offer, or rejected, with weekly stats.
+- **Local-first** — one SQLite database, no external services beyond the
+  Anthropic API calls you explicitly opt into.
 
 ## Requirements
 
-- Node.js 20+ (developed against 22)
-- npm
-- An Anthropic API key — needed for `sync`'s extraction step and for `jobhunt tailor`; every other command works without one, and `sync` itself just skips extraction with a clear message if the key isn't set
-- Chromium, for `jobhunt tailor`'s PDF output: `npx playwright install chromium` (the command tells you to run this if it's missing)
+| | |
+|---|---|
+| Node.js | 20 or later |
+| npm | any recent version |
+| Anthropic API key | required for match scoring and CV tailoring only |
+| Chromium | required for CV tailoring only (`npx playwright install chromium`) |
 
-## Install
+Every command other than `sync`'s extraction step and `tailor` works with
+no API key configured.
+
+## Installation
 
 ```sh
 git clone https://github.com/AdedigbaOluwad1/jobhunt
@@ -26,24 +70,24 @@ npm link
 jobhunt init
 ```
 
-`jobhunt init` is idempotent — safe to run again later. It creates
-`~/.jobhunt/` (override the location with the `JOBHUNT_HOME` env var) with:
+`jobhunt init` is idempotent and creates `~/.jobhunt/` (override with the
+`JOBHUNT_HOME` environment variable):
 
 ```
 ~/.jobhunt/
-├─ config.yaml     # watchlist, filters, profile, settings
-├─ master-cv.yaml  # your CV — fill this in with real experience before tailoring
-├─ .env            # put ANTHROPIC_API_KEY here
-├─ jobhunt.db      # SQLite database
-└─ out/            # tailored CV PDFs + JSON land here
+├── config.yaml      Source watchlist, filters, profile, and runtime settings
+├── master-cv.yaml   Your CV — the single source of truth for tailoring
+├── .env             ANTHROPIC_API_KEY
+├── jobhunt.db       SQLite database
+└── out/             Generated CV PDFs and their JSON source
 ```
 
-> The binary is named `jobhunt`, not `jobs` — `jobs` is a shell builtin
-> (job control) in bash/zsh and would silently shadow it.
+> **Note:** the binary is named `jobhunt`, not `jobs` — `jobs` is a shell
+> builtin in bash/zsh (job control) and would shadow it silently.
 
-## Configure
+## Configuration
 
-Edit `~/.jobhunt/config.yaml`. The important bits for now:
+Edit `~/.jobhunt/config.yaml`:
 
 ```yaml
 sources:
@@ -60,79 +104,94 @@ filters:
   titleInclude: [engineer, developer, backend, full stack]
   titleExclude: [intern, principal, director, manager, recruiter]
   remoteOnly: true
-  locationsAllow: [remote, worldwide, emea, africa]  # only checked for non-remote jobs
+  locationsAllow: [remote, worldwide, emea, africa]  # applied only to non-remote jobs
   descriptionExclude: ["security clearance", "us work authorization"]
   maxAgeDays: 30
 ```
 
-`profile` (your summary, years of experience, target titles, must-have
-skills, dealbreakers) and `llm` (which models to use, description length
-cap, concurrency) drive the match-scoring step — see
-`templates/config.example.yaml` for the full shape with comments.
+`profile` (summary, years of experience, target titles, must-have skills,
+dealbreakers) and `llm` (model selection, description length cap,
+concurrency) drive match scoring. See `templates/config.example.yaml` for
+the complete, annotated schema.
 
-Then fill in `~/.jobhunt/master-cv.yaml` with your real experience —
-`templates/master-cv.example.yaml` has the full shape with comments. Every
-experience/project/education entry and every bullet needs a stable,
-unique `id`; tailoring references bullets by id, and ids should never
-change once you've used them. `cv.maxBulletsPerRole` and `cv.maxPages` in
-config.yaml control how aggressively tailoring trims content to fit.
+Then populate `~/.jobhunt/master-cv.yaml` with your real experience —
+`templates/master-cv.example.yaml` documents the full shape. Every
+experience, project, education, and bullet entry requires a stable, unique
+`id`; tailoring references bullets by id, and ids must not change once in
+use. `cv.maxBulletsPerRole` and `cv.maxPages` control how aggressively
+tailoring trims content to fit.
 
 ### Configuration reference
 
-Every key in `config.yaml` is validated at startup (`.strict()` — an unknown
-key is an error, not a silent typo). The full field list:
+Every key is validated at startup with a strict schema — an unrecognized
+key is a startup error, not a silent no-op.
 
-| Key | Type | Default | Purpose |
+| Key | Type | Default | Description |
 |---|---|---|---|
-| `profile.summary` | string | — | Short self-description sent to the LLM for match scoring only (never the full CV). |
-| `profile.yearsExperience` | number | — | Used in the seniority/years-fit part of the match score. |
-| `profile.targetTitles` | string[] | — | Informational context for the LLM; not a hard filter. |
-| `profile.mustHaveSkills` | string[] | — | Informational context for the LLM; not a hard filter. |
-| `profile.dealbreakers` | string[] | — | Phrases the LLM treats as an automatic score penalty. |
-| `sources.greenhouse` | string[] | `[]` | Greenhouse board tokens (`boards-api.greenhouse.io/v1/boards/<token>`). |
-| `sources.lever` | string[] | `[]` | Lever company slugs (`api.lever.co`). |
-| `sources.lever_eu` | string[] | `[]` | Lever slugs hosted on `api.eu.lever.co` instead. |
-| `sources.ashby` | string[] | `[]` | Ashby job board names (`api.ashbyhq.com`). |
-| `sources.companyNames` | map<string,string> | — | Optional slug → display-name override, e.g. `{ figma: "Figma, Inc." }`. |
-| `sources.remote.remotive.enabled` | boolean | — | Turn the Remotive adapter on/off. |
-| `sources.remote.remotive.categories` | string[] | `[software-dev]` | Remotive category filter (one sync target per category). |
-| `sources.remote.remotive.minIntervalHours` | number | `12` | Minimum hours between real fetches of this source; a sooner `sync` skips it. |
-| `sources.remote.remoteok.enabled` | boolean | — | Turn the RemoteOK adapter on/off. |
-| `sources.remote.remoteok.minIntervalHours` | number | `12` | Same throttle, for RemoteOK. |
-| `sources.remote.wwr.enabled` | boolean | — | Turn the We Work Remotely adapter on/off. |
-| `sources.remote.wwr.feeds` | string[] | `[remote-programming-jobs]` | WWR RSS category feed names (one sync target per feed). |
-| `sources.remote.wwr.minIntervalHours` | number | `12` | Same throttle, for WWR. |
-| `filters.titleInclude` | string[] | — | Word-boundary match; title must match at least one (skipped if empty). |
-| `filters.titleExclude` | string[] | — | Word-boundary match; any match rejects the job. Checked before `titleInclude`. |
-| `filters.remoteOnly` | boolean | — | Reject any job not detected as remote. |
-| `filters.locationsAllow` | string[] | — | Substring allowlist for a **non-remote** job's location text (see "How it works" below). |
-| `filters.descriptionExclude` | string[] | — | Lowercased substring match anywhere in the description; any match rejects the job. |
-| `filters.maxAgeDays` | number | — | Reject a job older than this if `postedAt` is known (unknown `postedAt` always passes). |
-| `llm.extractionModel` | string | — | Model used for the cheap, high-volume scoring step. |
-| `llm.tailorModel` | string | — | Model used for the more expensive CV-tailoring step. |
-| `llm.maxDescriptionChars` | number | — | Description text is truncated to this length before being sent to the LLM. |
-| `llm.extractionConcurrency` | number | — | Max concurrent extraction calls per `sync`. |
-| `sync.httpConcurrency` | number | — | Max concurrent HTTP fetches across all sources per `sync`. |
-| `sync.httpTimeoutMs` | number | — | Per-request timeout for source fetches. |
-| `sync.httpRetries` | number | — | Retries on network error/429/5xx, with backoff; other 4xx never retry. |
-| `sync.maxExtractPerRun` | number | — | Default cap on (re-)extractions per `sync` (override with `--max-extract`). |
-| `sync.minScoreToHighlight` | number | — | Newly-inserted jobs scoring at or above this show in sync's "New matches ≥ N" list. |
-| `cv.maxPages` | number | — | `jobhunt tailor` drops the least-relevant bullet and re-renders until the PDF fits this many pages. |
-| `cv.maxBulletsPerRole` | number | — | Upper bound the tailoring prompt is told to respect per role/project. |
+| `profile.summary` | string | — | Sent to the LLM for match scoring only, never for tailoring. |
+| `profile.yearsExperience` | number | — | Used in the seniority/experience-fit component of the match score. |
+| `profile.targetTitles` | string[] | — | Context for the LLM; not a hard filter. |
+| `profile.mustHaveSkills` | string[] | — | Context for the LLM; not a hard filter. |
+| `profile.dealbreakers` | string[] | — | Phrases that incur an automatic score penalty. |
+| `sources.greenhouse` | string[] | `[]` | Greenhouse board tokens. |
+| `sources.lever` | string[] | `[]` | Lever company slugs. |
+| `sources.lever_eu` | string[] | `[]` | Lever slugs hosted on `api.eu.lever.co`. |
+| `sources.ashby` | string[] | `[]` | Ashby job board names. |
+| `sources.companyNames` | map&lt;string,string&gt; | — | Optional slug → display-name override. |
+| `sources.remote.remotive.enabled` | boolean | — | Enables the Remotive adapter. |
+| `sources.remote.remotive.categories` | string[] | `[software-dev]` | One sync target per category. |
+| `sources.remote.remotive.minIntervalHours` | number | `12` | Minimum interval between fetches of this source. |
+| `sources.remote.remoteok.enabled` | boolean | — | Enables the RemoteOK adapter. |
+| `sources.remote.remoteok.minIntervalHours` | number | `12` | Minimum fetch interval. |
+| `sources.remote.wwr.enabled` | boolean | — | Enables the We Work Remotely adapter. |
+| `sources.remote.wwr.feeds` | string[] | `[remote-programming-jobs]` | One sync target per RSS feed. |
+| `sources.remote.wwr.minIntervalHours` | number | `12` | Minimum fetch interval. |
+| `filters.titleInclude` | string[] | — | Word-boundary match; at least one required if non-empty. |
+| `filters.titleExclude` | string[] | — | Word-boundary match; any match rejects the job. Evaluated before `titleInclude`. |
+| `filters.remoteOnly` | boolean | — | Reject anything not detected as remote. |
+| `filters.locationsAllow` | string[] | — | Substring allowlist, applied only to non-remote jobs' location text. |
+| `filters.descriptionExclude` | string[] | — | Case-insensitive substring match anywhere in the description. |
+| `filters.maxAgeDays` | number | — | Reject a job older than this when `postedAt` is known. |
+| `llm.extractionModel` | string | — | Model used for match scoring. |
+| `llm.tailorModel` | string | — | Model used for CV tailoring. |
+| `llm.maxDescriptionChars` | number | — | Description truncation length before sending to the LLM. |
+| `llm.extractionConcurrency` | number | — | Max concurrent extraction calls per sync. |
+| `sync.httpConcurrency` | number | — | Max concurrent HTTP fetches per sync. |
+| `sync.httpTimeoutMs` | number | — | Per-request timeout. |
+| `sync.httpRetries` | number | — | Retries on network error, 429, or 5xx, with backoff. |
+| `sync.maxExtractPerRun` | number | — | Default cap on extractions per sync (`--max-extract` overrides). |
+| `sync.minScoreToHighlight` | number | — | Threshold for the "New matches" list in the sync summary. |
+| `cv.maxPages` | number | — | Target maximum PDF page count; least-relevant bullets are dropped to fit. |
+| `cv.maxBulletsPerRole` | number | — | Upper bound on bullets per role/project in tailoring. |
 | `cv.paper` | `A4` \| `Letter` | — | PDF page size. |
 
 ## Commands
 
 ### `jobhunt init`
 
-Creates `$JOBHUNT_HOME`, copies the example config/master-cv (never
-overwrites existing files), stubs `.env`, and runs database migrations.
+```
+jobhunt init
+```
 
-### `jobhunt sync [--source <name>] [--dry-run] [--no-extract] [--max-extract <n>]`
+Creates `$JOBHUNT_HOME`, copies the example config and master CV (without
+overwriting existing files), stubs `.env`, and applies database migrations.
+Idempotent.
 
-Fetches every configured source (bounded by `sync.httpConcurrency`),
-normalizes and dedupes the results, filters them, extracts/scores the
-survivors with an LLM, and prints a summary:
+### `jobhunt sync`
+
+```
+jobhunt sync [--source <name>] [--dry-run] [--no-extract] [--max-extract <n>]
+```
+
+Fetches every configured source, normalizes and deduplicates the results,
+applies filters, and scores the survivors with an LLM.
+
+| Flag | Effect |
+|---|---|
+| `--source <name>` | Limit to one source or board, e.g. `greenhouse` or `greenhouse:stripe`. |
+| `--dry-run` | Fetch and diff in memory; write nothing. |
+| `--no-extract` | Skip the LLM scoring step for this run. |
+| `--max-extract <n>` | Override `sync.maxExtractPerRun` for this run. |
 
 ```
 Sync complete in 1.4s
@@ -142,165 +201,230 @@ Filtered: 29 passed, 8 rejected (top reasons: title-no-match ×5, not-remote ×3
 Extracted 27 (2 failed)
 
 New matches ≥ 70:
-id    score  company  title                                   location
-#412  92     Acme     Senior Backend Engineer (TypeScript)     remote
-#415  81     Globex   Full Stack Engineer                      EMEA
+id    score  company  title                                  location
+#412  92     Acme     Senior Backend Engineer (TypeScript)    remote
+#415  81     Globex   Full Stack Engineer                     EMEA
 ```
 
-- `--source greenhouse` or `--source greenhouse:stripe` limits the run to one source or one board.
-- `--dry-run` fetches and diffs in memory without writing anything (skips extraction too).
-- `--no-extract` skips the LLM scoring step for this run.
-- `--max-extract <n>` caps how many jobs get (re-)extracted this run (default `sync.maxExtractPerRun` in config.yaml).
-- Newly-inserted jobs scoring at or above `sync.minScoreToHighlight` get called out in a "New matches" list at the end — a quick signal for what's worth a look before you even run `list`.
-- The remote-board sources (Remotive, RemoteOK, WWR) are throttled by their own `minIntervalHours` — a sync within that window skips them and says so, rather than re-fetching.
-- If `ANTHROPIC_API_KEY` isn't set, extraction is skipped with one clear line (`Extraction skipped: ANTHROPIC_API_KEY not set (N job(s) waiting)`) — the rest of the sync still runs and succeeds.
-- Exit codes: `0` full success, `2` some sources failed (partial success), `1` fatal error (bad config, db error).
+Remote-board sources are throttled by their own `minIntervalHours` and are
+skipped, not re-fetched, within that window. If no API key is configured,
+extraction is skipped with an explicit message rather than failing the
+run. Idempotent: an unchanged sync reports `0 new, 0 changed`, and
+extraction never re-scores unchanged content.
 
-Safe to run as often as you like — a second run with nothing changed
-reports `0 new, 0 changed`, and extraction makes zero LLM calls for jobs
-that haven't changed since they were last scored.
+Exit codes: `0` success, `2` partial (one or more sources failed), `1`
+fatal (invalid config, database error).
 
-### `jobhunt list [--all] [--company <text>] [--remote] [--min-score <n>] [--limit <n>] [--format table|json|md]`
-
-Lists stored jobs, sorted by match score (highest first, unscored last),
-then by newest. By default: non-closed, non-duplicate, filter-passed jobs.
-`--all` also includes rejected/duplicate/closed jobs and adds a `why`
-column explaining the filter reason. `--min-score` only shows jobs scored
-at or above that threshold. `--format md` prints a markdown table with the
-title linked to the posting — pipe it straight to a file: `jobhunt list
---format md > digest.md`.
-
-### `jobhunt show <id> [--desc] [--json]`
-
-Prints one job's details — company, title, location, URL, status, source
-— plus its LLM analysis if one exists: match score, role summary,
-requirements, nice-to-haves, stack, seniority, remote policy, match
-reasons, gaps, and red flags. `--desc` includes the full (stripped,
-plain-text) description.
-
-### `jobhunt tailor <id> [--regen] [--open]`
-
-Generates a tailored CV PDF for one job: runs extraction on demand if the
-job doesn't have one yet, has an LLM select/reorder/lightly reword bullets
-from your master CV to fit the role (never inventing facts — enforced in
-code, not just prompted), and renders it to `~/.jobhunt/out/`.
+### `jobhunt list`
 
 ```
-Tailored CV: /Users/you/.jobhunt/out/acme-backend-engineer-42.pdf (1 page)
+jobhunt list [--all] [--company <text>] [--remote] [--min-score <n>] [--limit <n>] [--format table|json|md]
+```
+
+Lists stored jobs, sorted by match score (unscored last), then recency. By
+default, only non-closed, non-duplicate, filter-passed jobs are shown.
+
+| Flag | Effect |
+|---|---|
+| `--all` | Include rejected, duplicate, and closed jobs, with a `why` column. |
+| `--company <text>` | Filter by company name substring. |
+| `--remote` | Remote jobs only. |
+| `--min-score <n>` | Only jobs scored at or above `n`. |
+| `--limit <n>` | Row limit (default 20). |
+| `--format md` | Markdown table with linked titles, e.g. `jobhunt list --format md > digest.md`. |
+
+### `jobhunt show <id>`
+
+```
+jobhunt show <id> [--desc] [--json]
+```
+
+Prints a job's details — company, title, location, URL, status, source —
+and its LLM analysis if one exists (match score, summary, requirements,
+stack, seniority, remote policy, gaps, red flags). `--desc` includes the
+full plain-text description.
+
+### `jobhunt tailor <id>`
+
+```
+jobhunt tailor <id> [--regen] [--open]
+```
+
+Generates a tailored CV PDF. Runs extraction on demand if the job has none,
+then has an LLM select, reorder, and lightly reword bullets from your
+master CV. A deterministic validator checks every bullet, skill, and
+summary line against the source material; anything it can't verify is
+reverted to the original wording rather than trusted. Facts never
+originate from the model — only your master CV does.
+
+```
+Tailored CV: ~/.jobhunt/out/acme-backend-engineer-42.pdf (1 page)
   warning: bullet "exp-acme-2" mentions "Kubernetes", which appears in neither the original bullet nor the master vocabulary
 ```
 
-- Without `--regen`, re-running it for the same job just prints the existing PDF's path — no LLM calls.
-- `--regen` tailors again from scratch.
-- `--open` opens the PDF after generating it.
-- Any warning printed means the model tried to add something not in your master CV, and that specific bullet/skill/summary was reverted to your original wording instead — the output PDF is always guaranteed faithful to your master CV, even when the model isn't.
-- Basics (name/contact), education, dates, job titles, and company names always come from `master-cv.yaml` verbatim — the model never writes those.
+Without `--regen`, a second run for the same job reuses the existing PDF
+with no LLM calls. `--open` opens the generated file. Basics, education,
+dates, titles, and company names always come from `master-cv.yaml`
+verbatim.
 
-### `jobhunt apply <id> [--mark]`
+### `jobhunt apply <id>`
+
+```
+jobhunt apply <id> [--mark]
+```
 
 Opens the job's apply URL in your default browser and prints the tailored
-CV's path so you can drag it into the application form.
+CV's path. If no tailored CV exists yet, an interactive session offers to
+generate one; a non-interactive session fails with instructions rather
+than hanging on a prompt. `--mark` records the job as applied without
+prompting; otherwise you're asked when connected to a terminal.
 
-- If there's no tailored CV yet: in an interactive shell, offers to run `jobhunt tailor <id>` on the spot; in a script/pipe (non-interactive), fails with a message telling you to run it yourself first — it never hangs waiting on a prompt that can't come.
-- `--mark` sets status to `applied` and records `appliedAt` without asking. Without it, you're asked `Mark as applied? [y/N]` when stdin is a TTY; non-interactively, nothing is marked unless you pass `--mark`.
+### `jobhunt status <id> <state>`
 
-### `jobhunt status <id> <state> [--note <text>]`
+```
+jobhunt status <id> <state> [--note <text>]
+```
 
-Sets a job's status — one of `new`, `shortlisted`, `applied`, `interview`,
-`offer`, `rejected`, `dismissed`, `withdrawn`. Transitions aren't
-restricted (you can correct a mistake by moving to any state); only the
-value itself is validated. Setting `applied` also records `appliedAt` on
-the job's tailored-CV record if it isn't set yet — the same thing
-`apply --mark` does, so it doesn't matter which command you used to apply.
-`--note` attaches free text to the change; a later status change without
-`--note` leaves the existing note alone.
+Sets a job's status: `new`, `shortlisted`, `applied`, `interview`, `offer`,
+`rejected`, `dismissed`, or `withdrawn`. Transitions are unrestricted.
+Setting `applied` also records the application timestamp if it isn't set
+already. `--note` attaches free text; omitting it on a later change leaves
+the existing note untouched.
 
 ### `jobhunt dismiss <id...>`
 
-Shortcut for `jobhunt status <id> dismissed` across one or more ids at once.
+```
+jobhunt dismiss <id...>
+```
+
+Shorthand for `jobhunt status <id> dismissed` across one or more ids.
 
 ### `jobhunt stats`
 
-Counts by status, jobs seen per week, applications per week, the average
-match score across jobs you've applied to, and which source has produced
-the most well-matched (filter-passed and scored) jobs.
+```
+jobhunt stats
+```
 
-### `jobhunt sources list | add <source:board> | remove <source:board> | check`
+Counts by status, jobs seen per week, applications per week, average match
+score of applied jobs, and the source producing the most well-matched
+results.
 
-- `list` — configured targets with their last sync result (ok/error, job count, last fetched).
-- `add greenhouse:stripe` — verifies the board actually exists with a live request, then adds it to `config.yaml` (preserving your comments and formatting).
-- `remove greenhouse:stripe` — drops it from `config.yaml`; jobs already stored are kept, just no longer refreshed.
-- `check` — fetches every configured target once and reports ok/fail; writes nothing to the database.
+### `jobhunt sources`
 
-## How it works
+```
+jobhunt sources list
+jobhunt sources add <source:board>
+jobhunt sources remove <source:board>
+jobhunt sources check
+```
 
-1. **Sources**: `greenhouse`, `lever`, and `ashby` pull raw postings straight from each ATS's public, unauthenticated job-board API. `remotive`, `remoteok`, and `wwr` (We Work Remotely, via RSS) are remote-job aggregators, each throttled by its own `minIntervalHours` to respect that site's terms — their listings always link back to the aggregator's own page, never the underlying employer, per each site's linkback requirements.
-2. **Normalize** strips and decodes HTML descriptions, detects remote status, and computes a content hash plus a cross-source dedupe key.
-3. **Upsert** by `(source, board, externalId)`: new jobs are inserted, unchanged jobs just bump `lastSeenAt`, changed jobs update in place and get re-filtered.
-4. **Dedupe**: if the same posting shows up under two sources — say, an aggregator and the company's own Greenhouse board — the earlier one wins the dedupe key, except an ATS listing always wins over a remote-board aggregator's copy of the same posting, whichever was fetched first.
-5. **Filter**, cheaply, before anything costs money: `maxAgeDays` → `titleExclude` → `titleInclude` → `remoteOnly`/`locationsAllow` → `descriptionExclude`. First failing rule wins and its reason is what `list --all` shows. Every non-closed job is re-checked against the *current* config on each sync, so editing `config.yaml` reclassifies old jobs without a refetch.
-6. **Closed detection**: after a target's fetch *succeeds*, any previously-seen job missing from that response is marked closed. A failed fetch never closes anything — a broken board must never be read as "these jobs are gone."
-7. **Extract & score**: every filter-passed, non-duplicate, non-closed job gets sent to an LLM (job text + your `profile` block — never the full CV) which returns structured requirements and a 0–100 match score via a forced tool call, validated against a strict schema. Results are cached by `(contentHash, promptVersion)`, so unchanged jobs cost nothing on repeat syncs; bumping the prompt version re-extracts everything. Invalid output gets one retry with the validation error appended, then the job is skipped for that run rather than crashing it.
-8. **Tailor**: on request (`jobhunt tailor <id>`), an LLM selects, reorders, and lightly rewords bullets from your master CV — the full master CV (minus contact details) plus the job's extracted requirements go into the prompt this time. A code-level validator then checks every bullet/skill/summary for fabricated numbers, technologies, or ids; anything that still fails after one retry reverts to your original master-CV wording rather than being trusted. The result renders to a single-column PDF via headless Chromium, trimming the least-relevant bullets if it runs over `cv.maxPages`.
-9. **Apply & track**: `jobhunt apply` opens the posting and hands you the CV path; `jobhunt status`/`dismiss` record where things stand. None of this submits anything on your behalf — you're always the one clicking submit.
+| Subcommand | Effect |
+|---|---|
+| `list` | Configured targets with last sync result. |
+| `add <source:board>` | Verifies the board exists, then adds it to `config.yaml`, preserving comments and formatting. |
+| `remove <source:board>` | Removes it from `config.yaml`; stored jobs are kept but no longer refreshed. |
+| `check` | Fetches every target once and reports ok/fail; writes nothing. |
 
-The full loop: `jobhunt sync` → `jobhunt list` → `jobhunt show <id>` → `jobhunt tailor <id>` → `jobhunt apply <id> --mark` → `jobhunt status <id> interview` (or `offer`, `rejected`, ...).
+## Architecture
 
-All data stays on your machine, in `~/.jobhunt/jobhunt.db` (SQLite),
-`~/.jobhunt/config.yaml`, and `~/.jobhunt/out/`. What's sent to the
-Anthropic API: job text + your profile summary for scoring, and job text +
-your full master CV (minus `basics`/contact details, re-attached locally
-at render time) for tailoring. Nothing else leaves your machine.
+1. **Sources** — `greenhouse`, `lever`, and `ashby` query each ATS's public
+   API directly. `remotive`, `remoteok`, and `wwr` are remote-job
+   aggregators, each throttled by `minIntervalHours` and always linking
+   back to the aggregator's own listing rather than the employer, per each
+   site's terms of use.
+2. **Normalization** strips and decodes HTML, detects remote status, and
+   computes a content hash and a cross-source deduplication key.
+3. **Upsert** by `(source, board, externalId)`: new jobs are inserted,
+   unchanged jobs update only their last-seen timestamp, changed jobs are
+   updated in place and re-filtered.
+4. **Deduplication** collapses a posting found under multiple sources into
+   one record; an ATS listing always takes precedence over a remote-board
+   aggregator's copy of the same posting.
+5. **Filtering** is deterministic and ordered — `maxAgeDays`,
+   `titleExclude`, `titleInclude`, `remoteOnly`/`locationsAllow`,
+   `descriptionExclude` — and runs before any LLM call. Every non-closed
+   job is re-evaluated against the current config on each sync, so editing
+   `config.yaml` reclassifies existing jobs without a refetch.
+6. **Closed-job detection** marks a previously seen job as closed only
+   after a target's fetch succeeds completely; a failed fetch never closes
+   anything.
+7. **Extraction** sends filter-passed, non-duplicate, non-closed jobs to an
+   LLM — job text and your profile summary, never the CV — for structured
+   requirements and a 0–100 match score via a schema-validated tool call.
+   Results are cached by `(contentHash, promptVersion)`; invalid output is
+   retried once, then skipped rather than failing the run.
+8. **Tailoring** sends the job's requirements and your full master CV
+   (excluding contact details, reattached at render time) to an LLM for
+   bullet selection and light rewording. A code-level validator checks
+   every claim against the source material; anything unverifiable reverts
+   to the original text after one retry. Output renders to a single-column
+   PDF via headless Chromium, trimming bullets to fit `cv.maxPages`.
+9. **Application tracking** records status transitions and application
+   timestamps. No step in this pipeline submits an application on your
+   behalf.
+
+Typical workflow:
+
+```
+jobhunt sync → jobhunt list → jobhunt show <id> → jobhunt tailor <id> → jobhunt apply <id> --mark → jobhunt status <id> interview
+```
+
+All data is stored locally: `~/.jobhunt/jobhunt.db` (SQLite),
+`~/.jobhunt/config.yaml`, and `~/.jobhunt/out/`. The only external calls
+are to the Anthropic API — job text and your profile summary for scoring,
+job text and your master CV (minus contact details) for tailoring.
 
 ## Scheduling
 
-jobhunt has no built-in scheduler — run `jobhunt sync` on whatever schedule
-you like via cron or launchd. It's always safe to run more often than
-necessary: remote-board sources self-throttle via `minIntervalHours`, and
-every upsert is idempotent. See [`docs/SCHEDULING.md`](docs/SCHEDULING.md)
-for cron and launchd examples, including a gotcha specific to nvm/fnm/volta
-users (scheduled jobs don't load your shell profile, so `node`/`jobhunt`
-may not resolve the way they do in your terminal).
+jobhunt has no built-in scheduler; run `jobhunt sync` via cron or launchd
+on whatever cadence you prefer. It is safe to run arbitrarily often —
+remote-board sources self-throttle and every upsert is idempotent. See
+[`docs/SCHEDULING.md`](docs/SCHEDULING.md) for cron and launchd examples,
+including a note for nvm/fnm/volta users on resolving `node` correctly in
+a non-interactive shell.
 
-## Development
+## Testing
 
 ```sh
-npm run build    # prisma generate + nest build
-npm test         # jest — fixture-based, no live network
-npm run test:live  # opt-in: one real request per adapter, to catch upstream API drift
-npm run lint     # tsc --noEmit
+npm run build      # prisma generate + nest build
+npm test           # unit tests against recorded fixtures; no network access
+npm run test:live  # opt-in: one live request per source adapter
+npm run lint       # type-check with tsc --noEmit
 ```
 
-Adapter tests run against real API responses saved under `test/fixtures/`,
-captured once and committed rather than hitting the network on every test
-run. `test:live` is the exception — it's excluded from the default `npm
-test` run and exists specifically to catch a source's API/feed shape
-changing since those fixtures were captured.
+Adapter tests run against real API responses captured under
+`test/fixtures/` and committed to the repository. `test:live` is excluded
+from the default test run and exists to detect upstream API or feed
+changes that fixture-based tests cannot.
 
-## Project layout
+## Project structure
 
 ```
 src/
-├─ common/     # http, text/HTML, hashing, concurrency limiter, errors
-├─ config/     # config.yaml loading/validation (zod) + comment-preserving edits
-├─ db/         # Prisma client + the one repository everything else uses
-├─ sources/    # one adapter per ATS, behind a shared JobSource interface
-├─ jobs/       # normalize, dedupe, filter, extraction, and the sync pipeline
-├─ llm/        # the only module that imports the Anthropic SDK
-├─ cv/         # master CV schema, tailoring, anti-fabrication validator, PDF rendering
-└─ commands/   # thin CLI commands — parse args, call a service, print
+├── common/    HTTP client, text/HTML utilities, hashing, concurrency limiter, error types
+├── config/    config.yaml loading and validation, comment-preserving edits
+├── db/        Prisma client and the single repository all data access goes through
+├── sources/   One adapter per source, behind a shared interface
+├── jobs/      Normalization, deduplication, filtering, extraction, and the sync pipeline
+├── llm/       Anthropic SDK integration
+├── cv/        Master CV schema, tailoring, fabrication validator, PDF rendering
+└── commands/  CLI command definitions
 ```
 
 ## Roadmap
 
-Ideas beyond what's built today, roughly in likely order:
+- **Multi-provider LLM support.** `llm/llm.service.ts` currently targets
+  the Anthropic API directly, and model configuration is Claude-specific.
+  Generalizing this requires a provider-neutral interface for structured
+  output plus one adapter per provider, following the same pattern as the
+  source adapters.
+- Additional ATS adapters (Workable, SmartRecruiters).
+- Regional job boards requiring HTML scraping.
+- Assisted, human-submitted form pre-fill for `apply`.
+- Cover letter generation from a job's requirement map.
+- Scheduled digest delivery (email, Slack) built on `list --format md`.
+- Multiple named profiles scored independently against the same job pool.
 
-1. **Multi-provider LLM support.** Right now `llm/llm.service.ts` is a thin wrapper around the Anthropic SDK specifically — model IDs in `config.yaml` (`llm.extractionModel`, `llm.tailorModel`) are Claude-specific, and `LlmService.callStructured()` is built around Anthropic's tool-use API shape. Making this provider-agnostic (OpenAI, Gemini, local models via Ollama, etc.) means introducing a provider-neutral interface for "structured output from a prompt + schema" and an adapter per provider, similar in spirit to how `JobSource` abstracts ATS/aggregator differences today. Not started — flagging it here as the next thing worth designing before building.
-2. Additional ATS adapters (Workable, SmartRecruiters) via the existing `JobSource` interface.
-3. Regional job-board adapters (would need HTML scraping, out of scope for the sources built so far).
-4. Assisted form pre-fill for `apply` (Playwright-driven, always human-submitted — never full auto-apply).
-5. Cover-letter generation using a job's `requirementMap`.
-6. Daily digest delivery (email/Slack) built on the existing `list --format md`.
-7. Saved searches / multiple profiles (e.g. a "backend" profile and a "full-stack" profile scored separately against the same job pool).
+## License
 
-None of these are started — this list exists so a future scoped piece of work has somewhere to start from, not as a commitment.
+Not yet licensed for external use or distribution.

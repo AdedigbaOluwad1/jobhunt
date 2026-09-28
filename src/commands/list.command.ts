@@ -1,7 +1,7 @@
 import { Command, CommandRunner, Option } from 'nest-commander';
 import { formatAge } from '../common/text';
 import { printTable } from '../common/table';
-import { JobsRepository } from '../db/jobs.repository';
+import { JobsRepository, JobWithExtraction } from '../db/jobs.repository';
 
 interface ListCommandOptions {
   all?: boolean;
@@ -9,7 +9,7 @@ interface ListCommandOptions {
   remote?: boolean;
   minScore?: number;
   limit?: number;
-  format?: 'table' | 'json';
+  format?: 'table' | 'json' | 'md';
 }
 
 @Command({ name: 'list', description: 'List stored jobs' })
@@ -31,6 +31,11 @@ export class ListCommand extends CommandRunner {
 
     if (options.format === 'json') {
       console.log(JSON.stringify(jobs, null, 2));
+      return;
+    }
+
+    if (options.format === 'md') {
+      console.log(this.toMarkdown(jobs));
       return;
     }
 
@@ -58,6 +63,16 @@ export class ListCommand extends CommandRunner {
     );
   }
 
+  private toMarkdown(jobs: JobWithExtraction[]): string {
+    const lines = [`# jobhunt digest — ${new Date().toISOString().slice(0, 10)}`, '', '| score | company | title | location |', '|---|---|---|---|'];
+    for (const job of jobs) {
+      const score = job.extraction ? String(job.extraction.matchScore) : '-';
+      const location = job.remote ? 'remote' : (job.location ?? '');
+      lines.push(`| ${score} | ${job.company} | [${job.title}](${job.url}) | ${location} |`);
+    }
+    return lines.join('\n');
+  }
+
   @Option({ flags: '--all', description: 'Include rejected, duplicate and closed jobs' })
   parseAll(): boolean {
     return true;
@@ -83,8 +98,8 @@ export class ListCommand extends CommandRunner {
     return Number(value);
   }
 
-  @Option({ flags: '--format <format>', description: 'table or json', choices: ['table', 'json'] })
-  parseFormat(value: string): 'table' | 'json' {
-    return value as 'table' | 'json';
+  @Option({ flags: '--format <format>', description: 'table, json, or md', choices: ['table', 'json', 'md'] })
+  parseFormat(value: string): 'table' | 'json' | 'md' {
+    return value as 'table' | 'json' | 'md';
   }
 }

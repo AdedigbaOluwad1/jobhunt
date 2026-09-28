@@ -4,7 +4,7 @@
   "description": "Personal CLI that finds, scores and helps you apply to matching jobs.",
   "private": true,
   "bin": {
-    "jobs": "dist/main.js"
+    "jobhunt": "dist/main.js"
   },
   "scripts": {
     "prebuild": "prisma generate",

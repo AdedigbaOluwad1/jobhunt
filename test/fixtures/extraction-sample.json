@@ -1,0 +1,14 @@
+{
+  "roleSummary": "Backend engineering role building TypeScript services on Postgres for a mid-size product team.",
+  "requirements": ["TypeScript", "Node.js", "PostgreSQL", "REST API design", "3+ years backend experience"],
+  "niceToHave": ["AWS", "Docker", "GraphQL"],
+  "stack": ["TypeScript", "Node.js", "PostgreSQL", "Redis"],
+  "seniority": "mid",
+  "yearsExperienceMin": 3,
+  "remotePolicy": "remote",
+  "locationRestriction": null,
+  "matchScore": 78,
+  "matchReasons": ["Strong TypeScript/Node overlap with profile", "Remote and matches target titles"],
+  "gaps": ["No mention of BullMQ or queue experience"],
+  "redFlags": []
+}

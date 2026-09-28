@@ -2,11 +2,12 @@ import * as fs from 'node:fs';
 import { Injectable } from '@nestjs/common';
 import { AppError } from '../common/errors';
 import { dbPath } from '../common/paths';
-import type { Job, SourceState, SyncRun } from '../generated/prisma/client';
+import type { Extraction, Job, SourceState, SyncRun } from '../generated/prisma/client';
 import { NormalizedJob } from '../jobs/normalize';
 import { PrismaService } from './prisma.service';
 
 export type UpsertStatus = 'inserted' | 'unchanged' | 'changed';
+export type JobWithExtraction = Job & { extraction: Extraction | null };
 
 export interface ListFilters {
   status?: string[];
@@ -15,7 +16,26 @@ export interface ListFilters {
   includeClosed?: boolean;
   company?: string;
   remote?: boolean;
+  minScore?: number;
   limit?: number;
+}
+
+export interface SaveExtractionInput {
+  contentHash: string;
+  promptVersion: string;
+  model: string;
+  roleSummary: string;
+  requirements: string[];
+  niceToHave: string[];
+  stack: string[];
+  seniority: string;
+  yearsExperienceMin: number | null;
+  remotePolicy: string;
+  locationRestriction: string | null;
+  matchScore: number;
+  matchReasons: string[];
+  gaps: string[];
+  redFlags: string[];
 }
 
 @Injectable()
@@ -130,8 +150,14 @@ export class JobsRepository {
     await this.prisma.job.update({ where: { id: jobId }, data: { duplicateOfId } });
   }
 
-  async findForList(filters: ListFilters): Promise<Job[]> {
-    return this.prisma.job.findMany({
+  /**
+   * Sorting/limiting happens in JS, not SQL: the default order is matchScore
+   * desc (nulls last) then firstSeenAt desc, and SQLite's NULLS ordering via
+   * Prisma's relation orderBy isn't worth fighting at this scale (a personal
+   * tool's job table is at most a few thousand rows).
+   */
+  async findForList(filters: ListFilters): Promise<JobWithExtraction[]> {
+    const jobs = await this.prisma.job.findMany({
       where: {
         status: filters.status ? { in: filters.status } : undefined,
         filterStatus: filters.filterStatus,
@@ -140,13 +166,26 @@ export class JobsRepository {
         company: filters.company ? { contains: filters.company } : undefined,
         remote: filters.remote,
       },
-      orderBy: { firstSeenAt: 'desc' },
-      take: filters.limit ?? 20,
+      include: { extraction: true },
     });
+
+    const filtered =
+      filters.minScore === undefined
+        ? jobs
+        : jobs.filter((job) => (job.extraction?.matchScore ?? -1) >= filters.minScore!);
+
+    filtered.sort((a, b) => {
+      const scoreA = a.extraction?.matchScore ?? -1;
+      const scoreB = b.extraction?.matchScore ?? -1;
+      if (scoreA !== scoreB) return scoreB - scoreA;
+      return b.firstSeenAt.getTime() - a.firstSeenAt.getTime();
+    });
+
+    return filtered.slice(0, filters.limit ?? 20);
   }
 
-  async findById(id: number): Promise<Job | null> {
-    return this.prisma.job.findUnique({ where: { id } });
+  async findById(id: number): Promise<JobWithExtraction | null> {
+    return this.prisma.job.findUnique({ where: { id }, include: { extraction: true } });
   }
 
   async createSyncRun(): Promise<SyncRun> {
@@ -211,5 +250,58 @@ export class JobsRepository {
       data: { closedAt: new Date() },
     });
     return result.count;
+  }
+
+  /**
+   * Jobs due for (re-)extraction: filter-passed, not a duplicate, not closed,
+   * and either never extracted or stale (content changed or the prompt did).
+   * Comparing job.contentHash against extraction.contentHash across the
+   * relation isn't a single Prisma where-clause, so the candidate set is
+   * filtered/sorted in JS — fine at this scale.
+   */
+  async findJobsNeedingExtraction(promptVersion: string, limit: number): Promise<JobWithExtraction[]> {
+    const candidates = await this.prisma.job.findMany({
+      where: { filterStatus: 'passed', duplicateOfId: null, closedAt: null },
+      include: { extraction: true },
+    });
+
+    const due = candidates.filter((job) => {
+      const ext = job.extraction;
+      return !ext || ext.contentHash !== job.contentHash || ext.promptVersion !== promptVersion;
+    });
+
+    due.sort((a, b) => {
+      if (!a.postedAt && !b.postedAt) return 0;
+      if (!a.postedAt) return 1;
+      if (!b.postedAt) return -1;
+      return b.postedAt.getTime() - a.postedAt.getTime();
+    });
+
+    return due.slice(0, limit);
+  }
+
+  async saveExtraction(jobId: number, data: SaveExtractionInput): Promise<void> {
+    const payload = {
+      contentHash: data.contentHash,
+      promptVersion: data.promptVersion,
+      model: data.model,
+      roleSummary: data.roleSummary,
+      requirements: JSON.stringify(data.requirements),
+      niceToHave: JSON.stringify(data.niceToHave),
+      stack: JSON.stringify(data.stack),
+      seniority: data.seniority,
+      yearsExperienceMin: data.yearsExperienceMin,
+      remotePolicy: data.remotePolicy,
+      locationRestriction: data.locationRestriction,
+      matchScore: data.matchScore,
+      matchReasons: JSON.stringify(data.matchReasons),
+      gaps: JSON.stringify(data.gaps),
+      redFlags: JSON.stringify(data.redFlags),
+    };
+    await this.prisma.extraction.upsert({
+      where: { jobId },
+      create: { jobId, ...payload },
+      update: payload,
+    });
   }
 }

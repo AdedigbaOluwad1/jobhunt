@@ -17,7 +17,7 @@ export class TailorCommand extends CommandRunner {
   async run(params: string[], options: TailorCommandOptions = {}): Promise<void> {
     const id = Number(params[0]);
     if (!Number.isInteger(id)) {
-      throw new AppError('CONFIG_INVALID', `"${params[0]}" is not a valid job id`);
+      throw new AppError('INVALID_ARGUMENT', `"${params[0]}" is not a valid job id`);
     }
 
     const result = await this.tailorService.tailorAndRender(id, { regen: options.regen });

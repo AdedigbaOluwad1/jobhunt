@@ -3,7 +3,8 @@ export type AppErrorCode =
   | 'CONFIG_MISSING'
   | 'SOURCE_FETCH_FAILED'
   | 'LLM_INVALID_OUTPUT'
-  | 'RENDER_FAILED';
+  | 'RENDER_FAILED'
+  | 'INVALID_ARGUMENT';
 
 export class AppError extends Error {
   constructor(

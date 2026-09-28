@@ -44,12 +44,12 @@ export class ShowCommand extends CommandRunner {
   async run(params: string[], options: ShowCommandOptions = {}): Promise<void> {
     const id = Number(params[0]);
     if (!Number.isInteger(id)) {
-      throw new AppError('CONFIG_INVALID', `"${params[0]}" is not a valid job id`);
+      throw new AppError('INVALID_ARGUMENT', `"${params[0]}" is not a valid job id`);
     }
 
     const job = await this.jobsRepository.findById(id);
     if (!job) {
-      throw new AppError('CONFIG_INVALID', `no job with id ${id}`);
+      throw new AppError('INVALID_ARGUMENT', `no job with id ${id}`);
     }
 
     if (options.json) {

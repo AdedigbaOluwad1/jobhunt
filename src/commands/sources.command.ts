@@ -10,7 +10,7 @@ import { SourcesService } from '../sources/sources.service';
 function parseTarget(raw: string): [string, string] {
   const idx = raw.indexOf(':');
   if (idx <= 0 || idx === raw.length - 1) {
-    throw new AppError('CONFIG_INVALID', `expected "source:board", got "${raw}"`);
+    throw new AppError('INVALID_ARGUMENT', `expected "source:board", got "${raw}"`);
   }
   return [raw.slice(0, idx), raw.slice(idx + 1)];
 }
@@ -66,12 +66,12 @@ export class SourcesAddCommand extends CommandRunner {
   async run(params: string[]): Promise<void> {
     const [source, board] = parseTarget(params[0]);
     if (!isArraySource(source)) {
-      throw new AppError('CONFIG_INVALID', `unknown or unsupported source "${source}"`);
+      throw new AppError('INVALID_ARGUMENT', `unknown or unsupported source "${source}"`);
     }
 
     const adapter = this.sourcesService.bySourceName(adapterSourceName(source));
     if (!adapter) {
-      throw new AppError('SOURCE_FETCH_FAILED', `no adapter registered yet for "${source}" (coming in a later phase)`);
+      throw new AppError('SOURCE_FETCH_FAILED', `no adapter registered for "${source}"`);
     }
 
     await adapter.fetch({ source: adapterSourceName(source), board });
@@ -88,7 +88,7 @@ export class SourcesRemoveCommand extends CommandRunner {
   async run(params: string[]): Promise<void> {
     const [source, board] = parseTarget(params[0]);
     if (!isArraySource(source)) {
-      throw new AppError('CONFIG_INVALID', `unknown or unsupported source "${source}"`);
+      throw new AppError('INVALID_ARGUMENT', `unknown or unsupported source "${source}"`);
     }
 
     const result = removeSourceTarget(source, board);

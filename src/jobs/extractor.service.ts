@@ -76,7 +76,7 @@ export class ExtractorService {
   async ensureExtraction(jobId: number): Promise<JobWithExtraction> {
     const job = await this.jobsRepository.findById(jobId);
     if (!job) {
-      throw new AppError('CONFIG_INVALID', `no job with id ${jobId}`);
+      throw new AppError('INVALID_ARGUMENT', `no job with id ${jobId}`);
     }
     const upToDate = job.extraction && job.extraction.contentHash === job.contentHash && job.extraction.promptVersion === EXTRACTION_PROMPT_VERSION;
     if (upToDate) {
@@ -88,7 +88,7 @@ export class ExtractorService {
     await this.extractOne(job);
     const refreshed = await this.jobsRepository.findById(jobId);
     if (!refreshed) {
-      throw new AppError('CONFIG_INVALID', `no job with id ${jobId}`);
+      throw new AppError('INVALID_ARGUMENT', `no job with id ${jobId}`);
     }
     return refreshed;
   }

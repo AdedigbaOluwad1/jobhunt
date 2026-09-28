@@ -21,12 +21,12 @@ export class ApplyCommand extends CommandRunner {
   async run(params: string[], options: ApplyCommandOptions = {}): Promise<void> {
     const id = Number(params[0]);
     if (!Number.isInteger(id)) {
-      throw new AppError('CONFIG_INVALID', `"${params[0]}" is not a valid job id`);
+      throw new AppError('INVALID_ARGUMENT', `"${params[0]}" is not a valid job id`);
     }
 
     const job = await this.jobsRepository.findById(id);
     if (!job) {
-      throw new AppError('CONFIG_INVALID', `no job with id ${id}`);
+      throw new AppError('INVALID_ARGUMENT', `no job with id ${id}`);
     }
 
     let application = await this.jobsRepository.findApplicationByJobId(id);
@@ -36,7 +36,7 @@ export class ApplyCommand extends CommandRunner {
         console.log(`Tailored CV: ${result.cvPdfPath}`);
         application = await this.jobsRepository.findApplicationByJobId(id);
       } else {
-        throw new AppError('CONFIG_INVALID', `no tailored CV for job ${id} yet. Run \`jobhunt tailor ${id}\` first.`);
+        throw new AppError('INVALID_ARGUMENT', `no tailored CV for job ${id} yet. Run \`jobhunt tailor ${id}\` first.`);
       }
     }
 

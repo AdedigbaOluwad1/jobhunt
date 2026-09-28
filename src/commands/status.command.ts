@@ -17,10 +17,10 @@ export class StatusCommand extends CommandRunner {
     const [idStr, state] = params;
     const id = Number(idStr);
     if (!Number.isInteger(id)) {
-      throw new AppError('CONFIG_INVALID', `"${idStr}" is not a valid job id`);
+      throw new AppError('INVALID_ARGUMENT', `"${idStr}" is not a valid job id`);
     }
     if (!isValidStatus(state)) {
-      throw new AppError('CONFIG_INVALID', `"${state}" is not a valid status. Use one of: ${STATUS_VALUES.join(', ')}`);
+      throw new AppError('INVALID_ARGUMENT', `"${state}" is not a valid status. Use one of: ${STATUS_VALUES.join(', ')}`);
     }
 
     await this.jobsRepository.updateStatus(id, state, options.note);

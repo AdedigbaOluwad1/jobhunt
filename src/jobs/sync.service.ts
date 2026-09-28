@@ -5,6 +5,7 @@ import { JobsRepository } from '../db/jobs.repository';
 import { RawJob, JobSource, SourceTarget } from '../sources/source.interface';
 import { SourcesService } from '../sources/sources.service';
 import { resolveDuplicate } from './dedupe';
+import { ExtractorService } from './extractor.service';
 import { FilterResult, FilterService } from './filter.service';
 import { normalize } from './normalize';
 
@@ -12,6 +13,8 @@ export interface SyncOptions {
   /** "greenhouse" or "greenhouse:stripe" */
   sourceFilter?: string;
   dryRun?: boolean;
+  noExtract?: boolean;
+  maxExtract?: number;
 }
 
 export interface FailedTarget {
@@ -35,6 +38,11 @@ export interface SyncStats {
   filterReasonCounts: Record<string, number>;
   /** Non-closed jobs whose filterStatus flipped on re-check, e.g. after editing config.yaml. */
   reclassified: number;
+  extracted: number;
+  extractionFailed: number;
+  llmInputTokens: number;
+  llmOutputTokens: number;
+  extractionSkippedReason?: string;
 }
 
 interface FetchOutcome {
@@ -50,6 +58,7 @@ export class SyncService {
     private readonly sourcesService: SourcesService,
     private readonly jobsRepository: JobsRepository,
     private readonly filterService: FilterService,
+    private readonly extractorService: ExtractorService,
   ) {}
 
   async sync(options: SyncOptions = {}): Promise<SyncStats> {
@@ -71,6 +80,10 @@ export class SyncService {
       filterRejected: 0,
       filterReasonCounts: {},
       reclassified: 0,
+      extracted: 0,
+      extractionFailed: 0,
+      llmInputTokens: 0,
+      llmOutputTokens: 0,
     };
 
     const targets = this.collectTargets(options.sourceFilter);
@@ -91,6 +104,16 @@ export class SyncService {
 
     if (!options.dryRun) {
       await this.reevaluateFilters(stats);
+    }
+
+    if (!options.dryRun && !options.noExtract) {
+      const maxExtract = options.maxExtract ?? config.sync.maxExtractPerRun;
+      const extraction = await this.extractorService.extractDue(maxExtract);
+      stats.extracted = extraction.succeeded;
+      stats.extractionFailed = extraction.failed;
+      stats.llmInputTokens = extraction.inputTokens;
+      stats.llmOutputTokens = extraction.outputTokens;
+      stats.extractionSkippedReason = extraction.skippedReason;
     }
 
     if (syncRun) {

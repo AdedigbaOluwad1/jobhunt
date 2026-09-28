@@ -1,5 +1,6 @@
 import { JobsRepository } from '../src/db/jobs.repository';
 import { PrismaService } from '../src/db/prisma.service';
+import { ExtractorService } from '../src/jobs/extractor.service';
 import { FilterService } from '../src/jobs/filter.service';
 import { SyncService } from '../src/jobs/sync.service';
 import { JobSource, RawJob, SourceTarget } from '../src/sources/source.interface';
@@ -7,6 +8,10 @@ import { SourcesService } from '../src/sources/sources.service';
 import { ConfigService } from '../src/config/config.service';
 import { makeTestConfig } from './helpers/fake-config';
 import { createTempHome } from './helpers/temp-home';
+
+function makeNoopExtractorService(): ExtractorService {
+  return { extractDue: async () => ({ attempted: 0, succeeded: 0, failed: 0, inputTokens: 0, outputTokens: 0 }) } as unknown as ExtractorService;
+}
 
 class FakeSource implements JobSource {
   constructor(
@@ -45,7 +50,7 @@ function makeSyncService(sources: JobSource[]): SyncService {
   const sourcesService = { all: () => sources, bySourceName: () => undefined } as unknown as SourcesService;
   const jobsRepository = new JobsRepository(new PrismaService());
   const filterService = new FilterService(configService);
-  return new SyncService(configService, sourcesService, jobsRepository, filterService);
+  return new SyncService(configService, sourcesService, jobsRepository, filterService, makeNoopExtractorService());
 }
 
 describe('SyncService', () => {
@@ -182,7 +187,7 @@ describe('SyncService', () => {
       all: () => [new FakeSource('greenhouse', 'acme', [rawJob({ title: 'Backend Engineer' })])],
       bySourceName: () => undefined,
     } as unknown as SourcesService;
-    const sync = new SyncService(configService, sourcesService, jobsRepository2, new FilterService(configService));
+    const sync = new SyncService(configService, sourcesService, jobsRepository2, new FilterService(configService), makeNoopExtractorService());
 
     const stats = await sync.sync();
 
@@ -200,7 +205,7 @@ describe('SyncService', () => {
     const source = new FakeSource('greenhouse', 'acme', [rawJob({ title: 'Backend Engineer' })]);
     const sourcesService = { all: () => [source], bySourceName: () => undefined } as unknown as SourcesService;
     const filterService = new FilterService(configService);
-    const sync = new SyncService(configService, sourcesService, jobsRepository, filterService);
+    const sync = new SyncService(configService, sourcesService, jobsRepository, filterService, makeNoopExtractorService());
 
     await sync.sync();
     config = makeTestConfig({ filters: { ...permissive.filters, titleInclude: ['frontend'] } });

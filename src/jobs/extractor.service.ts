@@ -1,4 +1,5 @@
 import { Injectable, Logger } from '@nestjs/common';
+import { AppError } from '../common/errors';
 import { withLimit } from '../common/limiter';
 import { ConfigService } from '../config/config.service';
 import { JobWithExtraction, JobsRepository } from '../db/jobs.repository';
@@ -70,6 +71,27 @@ export class ExtractorService {
     );
 
     return stats;
+  }
+
+  /** Used by `jobhunt tailor` to make sure a job has a current extraction before tailoring against it. */
+  async ensureExtraction(jobId: number): Promise<JobWithExtraction> {
+    const job = await this.jobsRepository.findById(jobId);
+    if (!job) {
+      throw new AppError('CONFIG_INVALID', `no job with id ${jobId}`);
+    }
+    const upToDate = job.extraction && job.extraction.contentHash === job.contentHash && job.extraction.promptVersion === EXTRACTION_PROMPT_VERSION;
+    if (upToDate) {
+      return job;
+    }
+    if (!this.llmService.hasApiKey()) {
+      throw new AppError('CONFIG_MISSING', 'ANTHROPIC_API_KEY not set; cannot extract requirements for tailoring.');
+    }
+    await this.extractOne(job);
+    const refreshed = await this.jobsRepository.findById(jobId);
+    if (!refreshed) {
+      throw new AppError('CONFIG_INVALID', `no job with id ${jobId}`);
+    }
+    return refreshed;
   }
 
   private async extractOne(job: JobWithExtraction): Promise<StructuredCallResult<ExtractionResult>> {

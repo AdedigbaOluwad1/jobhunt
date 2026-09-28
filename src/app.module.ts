@@ -10,13 +10,15 @@ import {
   SourcesRemoveCommand,
 } from './commands/sources.command';
 import { SyncCommand } from './commands/sync.command';
+import { TailorCommand } from './commands/tailor.command';
 import { ConfigModule } from './config/config.module';
+import { CvModule } from './cv/cv.module';
 import { DbModule } from './db/db.module';
 import { JobsModule } from './jobs/jobs.module';
 import { SourcesModule } from './sources/sources.module';
 
 @Module({
-  imports: [ConfigModule, DbModule, SourcesModule, JobsModule],
+  imports: [ConfigModule, DbModule, SourcesModule, JobsModule, CvModule],
   providers: [
     InitCommand,
     SyncCommand,
@@ -27,6 +29,7 @@ import { SourcesModule } from './sources/sources.module';
     SourcesAddCommand,
     SourcesRemoveCommand,
     SourcesCheckCommand,
+    TailorCommand,
   ],
 })
 export class AppModule {}

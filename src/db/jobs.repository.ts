@@ -2,7 +2,7 @@ import * as fs from 'node:fs';
 import { Injectable } from '@nestjs/common';
 import { AppError } from '../common/errors';
 import { dbPath } from '../common/paths';
-import type { Extraction, Job, SourceState, SyncRun } from '../generated/prisma/client';
+import type { Application, Extraction, Job, SourceState, SyncRun } from '../generated/prisma/client';
 import { NormalizedJob } from '../jobs/normalize';
 import { PrismaService } from './prisma.service';
 
@@ -303,5 +303,13 @@ export class JobsRepository {
       create: { jobId, ...payload },
       update: payload,
     });
+  }
+
+  async findApplicationByJobId(jobId: number): Promise<Application | null> {
+    return this.prisma.application.findFirst({ where: { jobId }, orderBy: { createdAt: 'desc' } });
+  }
+
+  async createApplication(input: { jobId: number; cvPdfPath: string; tailoredJson: string }): Promise<Application> {
+    return this.prisma.application.create({ data: input });
   }
 }

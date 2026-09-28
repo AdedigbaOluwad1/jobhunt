@@ -1,0 +1,45 @@
+profile:
+  # Used ONLY for match scoring. Keep it short. The full CV is not sent during extraction.
+  summary: >
+    Full-stack developer, 6 years experience. Strong in TypeScript, React, Next.js,
+    NestJS, Prisma, BullMQ. Also does infrastructure work.
+  yearsExperience: 6
+  targetTitles: [full stack engineer, backend engineer, software engineer]
+  mustHaveSkills: [typescript]
+  dealbreakers: ["security clearance", "on-site only"]
+
+sources:
+  greenhouse: [stripe, figma]        # board tokens
+  lever: [spotify]                   # company slugs
+  ashby: [linear, ramp]              # job board names
+  # lever_eu: [somecompany]          # EU-hosted Lever accounts, if needed
+  remote:
+    remotive: { enabled: true, categories: [software-dev], minIntervalHours: 12 }
+    remoteok: { enabled: true, minIntervalHours: 12 }
+    wwr:      { enabled: true, feeds: [remote-programming-jobs], minIntervalHours: 12 }
+
+filters:
+  titleInclude: [engineer, developer, software, backend, fullstack, full-stack, full stack]
+  titleExclude: [intern, principal, director, manager, "sales", "recruiter", "android", "ios"]
+  remoteOnly: true
+  locationsAllow: [remote, worldwide, anywhere, emea, africa, nigeria]  # substring, case-insensitive; used when remoteOnly=false or location text is restrictive
+  descriptionExclude: ["must be located in the us", "us work authorization", "security clearance"]
+  maxAgeDays: 30
+
+llm:
+  extractionModel: claude-haiku-4-5-20251001   # cheap, high volume; verify current model IDs in Anthropic docs
+  tailorModel: claude-sonnet-5                 # better writing; verify current model IDs
+  maxDescriptionChars: 12000
+  extractionConcurrency: 3
+
+sync:
+  httpConcurrency: 5
+  httpTimeoutMs: 15000
+  httpRetries: 2
+  maxExtractPerRun: 50
+  minScoreToHighlight: 70
+
+cv:
+  maxPages: 1
+  maxBulletsPerRole: 5
+  paper: A4

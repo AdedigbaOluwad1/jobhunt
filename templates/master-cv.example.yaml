@@ -1,0 +1,48 @@
+basics:
+  name: Full Name
+  email: me@example.com
+  phone: "+000000000000"
+  location: City, Country
+  links:
+    - { label: GitHub, url: https://github.com/handle }
+    - { label: LinkedIn, url: https://linkedin.com/in/handle }
+
+summary: >
+  Default professional summary, 2-3 sentences.
+
+skills:
+  - group: Languages
+    items: [TypeScript, JavaScript, SQL]
+  - group: Backend
+    items: [NestJS, Node.js, Prisma, BullMQ, PostgreSQL, Redis]
+  - group: Frontend
+    items: [React, Next.js]
+
+experience:
+  - id: exp-acme
+    company: Acme Ltd
+    title: Software Engineer
+    location: Remote
+    start: "2022-03"
+    end: null                 # null = present
+    bullets:
+      - id: exp-acme-1
+        text: Built a queue-based email pipeline with BullMQ handling 50k jobs/day.
+        tags: [bullmq, redis, backend]
+      - id: exp-acme-2
+        text: Replace this with a real bullet from your experience.
+        tags: []
+
+projects:
+  - id: proj-x
+    name: Project X
+    url: https://example.com
+    bullets:
+      - { id: proj-x-1, text: "Replace this with a real project bullet.", tags: [] }
+
+education:
+  - id: edu-1
+    institution: University
+    degree: B.Sc. Computer Science
+    start: "2021"
+    end: "2025"

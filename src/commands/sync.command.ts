@@ -42,7 +42,11 @@ export class SyncCommand extends CommandRunner {
 
     // Adapter errors already read "source:board — message", so join them as-is.
     const failedSummary = stats.failedTargets.map((f) => f.error).join('; ');
-    console.log(`Sources: ${stats.targetsOk} ok, ${stats.targetsFailed} failed${failedSummary ? ` (${failedSummary})` : ''}`);
+    const skippedSummary = stats.skippedTargets.map((s) => `${s.source}:${s.board} — ${s.reason}`).join('; ');
+    console.log(
+      `Sources: ${stats.targetsOk} ok, ${stats.targetsFailed} failed${failedSummary ? ` (${failedSummary})` : ''}` +
+        (stats.targetsSkipped > 0 ? `, ${stats.targetsSkipped} skipped (${skippedSummary})` : ''),
+    );
     console.log(
       `Fetched ${stats.fetched} jobs → ${stats.inserted} new, ${stats.changed} changed, ${stats.closed} closed, ${stats.duplicates} duplicates`,
     );

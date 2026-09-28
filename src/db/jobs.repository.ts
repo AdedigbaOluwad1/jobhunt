@@ -230,6 +230,10 @@ export class JobsRepository {
     return this.prisma.sourceState.findMany({ orderBy: [{ source: 'asc' }, { board: 'asc' }] });
   }
 
+  async getSourceState(source: string, board: string): Promise<SourceState | null> {
+    return this.prisma.sourceState.findUnique({ where: { source_board: { source, board } } });
+  }
+
   /** Every non-closed job, for re-running filters against the current config (spec 9.2). */
   async findAllNonClosed(): Promise<Job[]> {
     return this.prisma.job.findMany({ where: { closedAt: null } });

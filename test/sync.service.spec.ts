@@ -19,10 +19,11 @@ class FakeSource implements JobSource {
     private readonly board: string,
     private jobs: RawJob[] | (() => RawJob[]),
     private readonly shouldFail = false,
+    private readonly minIntervalHours?: number,
   ) {}
 
   targets(): SourceTarget[] {
-    return [{ source: this.name, board: this.board }];
+    return [{ source: this.name, board: this.board, minIntervalHours: this.minIntervalHours }];
   }
 
   async fetch(): Promise<RawJob[]> {
@@ -215,5 +216,53 @@ describe('SyncService', () => {
     const job = await jobsRepository.findExistingByKey('greenhouse', 'acme', '1');
     expect(job?.filterStatus).toBe('rejected');
     expect(job?.filterReason).toBe('title-no-match');
+  });
+
+  describe('minIntervalHours throttling (remote-board sources)', () => {
+    it('skips a target fetched more recently than its minIntervalHours, without calling fetch again', async () => {
+      const fetchSpy = jest.fn(() => [rawJob({ source: 'remotive', board: 'software-dev', externalId: '1' })]);
+      const source = new FakeSource('remotive', 'software-dev', fetchSpy, false, 12);
+      const sync = makeSyncService([source]);
+
+      await sync.sync();
+      const second = await sync.sync();
+
+      expect(fetchSpy).toHaveBeenCalledTimes(1);
+      expect(second.targetsSkipped).toBe(1);
+      expect(second.skippedTargets).toEqual([{ source: 'remotive', board: 'software-dev', reason: expect.stringContaining('ago') }]);
+      expect(second.targetsOk).toBe(0);
+      expect(second.targetsFailed).toBe(0);
+    });
+
+    it('fetches again once minIntervalHours has elapsed', async () => {
+      const fetchSpy = jest.fn(() => [rawJob({ source: 'remotive', board: 'software-dev', externalId: '1' })]);
+      const source = new FakeSource('remotive', 'software-dev', fetchSpy, false, 12);
+      const sync = makeSyncService([source]);
+
+      await sync.sync();
+      const prisma = new PrismaService();
+      await prisma.sourceState.update({
+        where: { source_board: { source: 'remotive', board: 'software-dev' } },
+        data: { lastFetchedAt: new Date(Date.now() - 13 * 3_600_000) },
+      });
+
+      const second = await sync.sync();
+
+      expect(fetchSpy).toHaveBeenCalledTimes(2);
+      expect(second.targetsSkipped).toBe(0);
+      expect(second.targetsOk).toBe(1);
+    });
+
+    it('does not throttle a target with no minIntervalHours (ATS sources)', async () => {
+      const fetchSpy = jest.fn(() => [rawJob({ externalId: '1' })]);
+      const source = new FakeSource('greenhouse', 'acme', fetchSpy);
+      const sync = makeSyncService([source]);
+
+      await sync.sync();
+      const second = await sync.sync();
+
+      expect(fetchSpy).toHaveBeenCalledTimes(2);
+      expect(second.targetsSkipped).toBe(0);
+    });
   });
 });

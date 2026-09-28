@@ -23,10 +23,18 @@ export interface FailedTarget {
   error: string;
 }
 
+export interface SkippedTarget {
+  source: string;
+  board: string;
+  reason: string;
+}
+
 export interface SyncStats {
   targetsOk: number;
   targetsFailed: number;
   failedTargets: FailedTarget[];
+  targetsSkipped: number;
+  skippedTargets: SkippedTarget[];
   fetched: number;
   inserted: number;
   changed: number;
@@ -51,6 +59,11 @@ interface FetchOutcome {
   ok: boolean;
 }
 
+function formatHoursAgo(hours: number): string {
+  if (hours < 1) return `${Math.round(hours * 60)}m`;
+  return `${Math.round(hours)}h`;
+}
+
 @Injectable()
 export class SyncService {
   constructor(
@@ -70,6 +83,8 @@ export class SyncService {
       targetsOk: 0,
       targetsFailed: 0,
       failedTargets: [],
+      targetsSkipped: 0,
+      skippedTargets: [],
       fetched: 0,
       inserted: 0,
       changed: 0,
@@ -128,6 +143,19 @@ export class SyncService {
     options: SyncOptions,
     stats: SyncStats,
   ): Promise<FetchOutcome> {
+    if (target.minIntervalHours) {
+      const state = await this.jobsRepository.getSourceState(target.source, target.board);
+      if (state?.lastFetchedAt) {
+        const hoursSinceFetch = (Date.now() - state.lastFetchedAt.getTime()) / 3_600_000;
+        if (hoursSinceFetch < target.minIntervalHours) {
+          const reason = `fetched ${formatHoursAgo(hoursSinceFetch)} ago`;
+          stats.targetsSkipped++;
+          stats.skippedTargets.push({ source: target.source, board: target.board, reason });
+          return { target, rawJobs: [], ok: false };
+        }
+      }
+    }
+
     try {
       const rawJobs = await source.fetch(target);
       stats.targetsOk++;

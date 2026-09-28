@@ -533,4 +533,4 @@ src/
 
 ## License
 
-Not yet licensed for external use or distribution.
+[MIT](LICENSE)

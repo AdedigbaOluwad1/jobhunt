@@ -8,6 +8,7 @@
     "url": "https://github.com/AdedigbaOluwad1/jobhunt"
   },
   "private": true,
+  "license": "MIT",
   "engines": {
     "node": ">=20"
   },

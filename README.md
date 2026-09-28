@@ -18,7 +18,7 @@ aid: `sync` finds and scores jobs, you decide what to do next.
 | 3 | LLM match scoring (`ExtractorService`), cached by content hash | ✅ |
 | 4 | CV tailoring + PDF generation (`jobhunt tailor`) | ✅ |
 | 5 | Apply flow + status tracking (`apply`, `status`, `dismiss`, `stats`) | ✅ |
-| 6 | Remote-board sources (Remotive, RemoteOK, We Work Remotely) | not started |
+| 6 | Remote-board sources (Remotive, RemoteOK, We Work Remotely) | ✅ |
 | 7 | Docs, scheduling examples, polish | not started |
 
 ## Requirements
@@ -64,6 +64,10 @@ sources:
   lever: [veeva]                # Lever company slugs
   lever_eu: [somecompany]       # Lever accounts hosted on api.eu.lever.co
   ashby: [linear]               # Ashby job board names
+  remote:
+    remotive: { enabled: true, categories: [software-dev], minIntervalHours: 12 }
+    remoteok: { enabled: true, minIntervalHours: 12 }
+    wwr:      { enabled: true, feeds: [remote-programming-jobs], minIntervalHours: 12 }
 
 filters:
   titleInclude: [engineer, developer, backend, full stack]
@@ -101,7 +105,7 @@ survivors with an LLM, and prints a summary:
 
 ```
 Sync complete in 1.4s
-Sources: 3 ok, 1 failed (lever:foo — board not found (404); check the slug in config.yaml)
+Sources: 3 ok, 1 failed (lever:foo — board not found (404); check the slug in config.yaml), 1 skipped (remotive:software-dev — fetched 3h ago)
 Fetched 1120 jobs → 37 new, 12 changed, 21 closed, 3 duplicates
 Filtered: 29 passed, 8 rejected (top reasons: title-no-match ×5, not-remote ×3)
 Extracted 27 (2 failed)
@@ -111,6 +115,7 @@ Extracted 27 (2 failed)
 - `--dry-run` fetches and diffs in memory without writing anything (skips extraction too).
 - `--no-extract` skips the LLM scoring step for this run.
 - `--max-extract <n>` caps how many jobs get (re-)extracted this run (default `sync.maxExtractPerRun` in config.yaml).
+- The remote-board sources (Remotive, RemoteOK, WWR) are throttled by their own `minIntervalHours` — a sync within that window skips them and says so, rather than re-fetching.
 - If `ANTHROPIC_API_KEY` isn't set, extraction is skipped with one clear line (`Extraction skipped: ANTHROPIC_API_KEY not set (N job(s) waiting)`) — the rest of the sync still runs and succeeds.
 - Exit codes: `0` full success, `2` some sources failed (partial success), `1` fatal error (bad config, db error).
 
@@ -192,10 +197,10 @@ the most well-matched (filter-passed and scored) jobs.
 
 ## How it works
 
-1. **Sources** (`greenhouse`, `lever`, `ashby` today) pull raw postings straight from each ATS's public, unauthenticated job-board API.
+1. **Sources**: `greenhouse`, `lever`, and `ashby` pull raw postings straight from each ATS's public, unauthenticated job-board API. `remotive`, `remoteok`, and `wwr` (We Work Remotely, via RSS) are remote-job aggregators, each throttled by its own `minIntervalHours` to respect that site's terms — their listings always link back to the aggregator's own page, never the underlying employer, per each site's linkback requirements.
 2. **Normalize** strips and decodes HTML descriptions, detects remote status, and computes a content hash plus a cross-source dedupe key.
 3. **Upsert** by `(source, board, externalId)`: new jobs are inserted, unchanged jobs just bump `lastSeenAt`, changed jobs update in place and get re-filtered.
-4. **Dedupe**: if the same posting shows up under two sources, the earlier one wins the dedupe key — and once remote-board aggregators exist (Phase 6), an ATS listing always wins over one from an aggregator.
+4. **Dedupe**: if the same posting shows up under two sources — say, an aggregator and the company's own Greenhouse board — the earlier one wins the dedupe key, except an ATS listing always wins over a remote-board aggregator's copy of the same posting, whichever was fetched first.
 5. **Filter**, cheaply, before anything costs money: `maxAgeDays` → `titleExclude` → `titleInclude` → `remoteOnly`/`locationsAllow` → `descriptionExclude`. First failing rule wins and its reason is what `list --all` shows. Every non-closed job is re-checked against the *current* config on each sync, so editing `config.yaml` reclassifies old jobs without a refetch.
 6. **Closed detection**: after a target's fetch *succeeds*, any previously-seen job missing from that response is marked closed. A failed fetch never closes anything — a broken board must never be read as "these jobs are gone."
 7. **Extract & score**: every filter-passed, non-duplicate, non-closed job gets sent to an LLM (job text + your `profile` block — never the full CV) which returns structured requirements and a 0–100 match score via a forced tool call, validated against a strict schema. Results are cached by `(contentHash, promptVersion)`, so unchanged jobs cost nothing on repeat syncs; bumping the prompt version re-extracts everything. Invalid output gets one retry with the validation error appended, then the job is skipped for that run rather than crashing it.

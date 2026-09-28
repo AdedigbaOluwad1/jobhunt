@@ -17,7 +17,7 @@ aid: `sync` finds and scores jobs, you decide what to do next.
 | 2 | Lever + Ashby adapters, real filtering, closed-job detection | ✅ |
 | 3 | LLM match scoring (`ExtractorService`), cached by content hash | ✅ |
 | 4 | CV tailoring + PDF generation (`jobhunt tailor`) | ✅ |
-| 5 | Apply flow + status tracking (`apply`, `status`, `stats`) | not started |
+| 5 | Apply flow + status tracking (`apply`, `status`, `dismiss`, `stats`) | ✅ |
 | 6 | Remote-board sources (Remotive, RemoteOK, We Work Remotely) | not started |
 | 7 | Docs, scheduling examples, polish | not started |
 
@@ -118,13 +118,15 @@ Safe to run as often as you like — a second run with nothing changed
 reports `0 new, 0 changed`, and extraction makes zero LLM calls for jobs
 that haven't changed since they were last scored.
 
-### `jobhunt list [--all] [--company <text>] [--remote] [--min-score <n>] [--limit <n>] [--format table|json]`
+### `jobhunt list [--all] [--company <text>] [--remote] [--min-score <n>] [--limit <n>] [--format table|json|md]`
 
 Lists stored jobs, sorted by match score (highest first, unscored last),
 then by newest. By default: non-closed, non-duplicate, filter-passed jobs.
 `--all` also includes rejected/duplicate/closed jobs and adds a `why`
 column explaining the filter reason. `--min-score` only shows jobs scored
-at or above that threshold.
+at or above that threshold. `--format md` prints a markdown table with the
+title linked to the posting — pipe it straight to a file: `jobhunt list
+--format md > digest.md`.
 
 ### `jobhunt show <id> [--desc] [--json]`
 
@@ -152,6 +154,35 @@ Tailored CV: /Users/you/.jobhunt/out/acme-backend-engineer-42.pdf (1 page)
 - Any warning printed means the model tried to add something not in your master CV, and that specific bullet/skill/summary was reverted to your original wording instead — the output PDF is always guaranteed faithful to your master CV, even when the model isn't.
 - Basics (name/contact), education, dates, job titles, and company names always come from `master-cv.yaml` verbatim — the model never writes those.
 
+### `jobhunt apply <id> [--mark]`
+
+Opens the job's apply URL in your default browser and prints the tailored
+CV's path so you can drag it into the application form.
+
+- If there's no tailored CV yet: in an interactive shell, offers to run `jobhunt tailor <id>` on the spot; in a script/pipe (non-interactive), fails with a message telling you to run it yourself first — it never hangs waiting on a prompt that can't come.
+- `--mark` sets status to `applied` and records `appliedAt` without asking. Without it, you're asked `Mark as applied? [y/N]` when stdin is a TTY; non-interactively, nothing is marked unless you pass `--mark`.
+
+### `jobhunt status <id> <state> [--note <text>]`
+
+Sets a job's status — one of `new`, `shortlisted`, `applied`, `interview`,
+`offer`, `rejected`, `dismissed`, `withdrawn`. Transitions aren't
+restricted (you can correct a mistake by moving to any state); only the
+value itself is validated. Setting `applied` also records `appliedAt` on
+the job's tailored-CV record if it isn't set yet — the same thing
+`apply --mark` does, so it doesn't matter which command you used to apply.
+`--note` attaches free text to the change; a later status change without
+`--note` leaves the existing note alone.
+
+### `jobhunt dismiss <id...>`
+
+Shortcut for `jobhunt status <id> dismissed` across one or more ids at once.
+
+### `jobhunt stats`
+
+Counts by status, jobs seen per week, applications per week, the average
+match score across jobs you've applied to, and which source has produced
+the most well-matched (filter-passed and scored) jobs.
+
 ### `jobhunt sources list | add <source:board> | remove <source:board> | check`
 
 - `list` — configured targets with their last sync result (ok/error, job count, last fetched).
@@ -169,6 +200,9 @@ Tailored CV: /Users/you/.jobhunt/out/acme-backend-engineer-42.pdf (1 page)
 6. **Closed detection**: after a target's fetch *succeeds*, any previously-seen job missing from that response is marked closed. A failed fetch never closes anything — a broken board must never be read as "these jobs are gone."
 7. **Extract & score**: every filter-passed, non-duplicate, non-closed job gets sent to an LLM (job text + your `profile` block — never the full CV) which returns structured requirements and a 0–100 match score via a forced tool call, validated against a strict schema. Results are cached by `(contentHash, promptVersion)`, so unchanged jobs cost nothing on repeat syncs; bumping the prompt version re-extracts everything. Invalid output gets one retry with the validation error appended, then the job is skipped for that run rather than crashing it.
 8. **Tailor**: on request (`jobhunt tailor <id>`), an LLM selects, reorders, and lightly rewords bullets from your master CV — the full master CV (minus contact details) plus the job's extracted requirements go into the prompt this time. A code-level validator then checks every bullet/skill/summary for fabricated numbers, technologies, or ids; anything that still fails after one retry reverts to your original master-CV wording rather than being trusted. The result renders to a single-column PDF via headless Chromium, trimming the least-relevant bullets if it runs over `cv.maxPages`.
+9. **Apply & track**: `jobhunt apply` opens the posting and hands you the CV path; `jobhunt status`/`dismiss` record where things stand. None of this submits anything on your behalf — you're always the one clicking submit.
+
+The full loop: `jobhunt sync` → `jobhunt list` → `jobhunt show <id>` → `jobhunt tailor <id>` → `jobhunt apply <id> --mark` → `jobhunt status <id> interview` (or `offer`, `rejected`, ...).
 
 All data stays on your machine, in `~/.jobhunt/jobhunt.db` (SQLite),
 `~/.jobhunt/config.yaml`, and `~/.jobhunt/out/`. What's sent to the

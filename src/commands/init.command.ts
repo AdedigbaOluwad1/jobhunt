@@ -65,11 +65,11 @@ export class InitCommand extends CommandRunner {
 
   private async migrate(): Promise<void> {
     const root = packageRoot();
-    const prismaBin = path.join(root, 'node_modules', '.bin', 'prisma');
+    const prismaCli = require.resolve('prisma/build/index.js', { paths: [root] });
     const schema = path.join(root, 'prisma', 'schema.prisma');
     const config = path.join(root, 'prisma.config.ts');
 
-    await execFileAsync(prismaBin, ['migrate', 'deploy', '--schema', schema, '--config', config], {
+    await execFileAsync(process.execPath, [prismaCli, 'migrate', 'deploy', '--schema', schema, '--config', config], {
       env: { ...process.env, DATABASE_URL: `file:${dbPath()}` },
     });
   }

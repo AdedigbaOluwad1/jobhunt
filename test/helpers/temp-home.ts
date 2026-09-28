@@ -18,12 +18,12 @@ export async function createTempHome(): Promise<{ home: string; cleanup: () => v
   const previousHome = process.env.JOBHUNT_HOME;
   process.env.JOBHUNT_HOME = home;
 
-  const prismaBin = path.join(PACKAGE_ROOT, 'node_modules', '.bin', 'prisma');
+  const prismaCli = require.resolve('prisma/build/index.js', { paths: [PACKAGE_ROOT] });
   const schema = path.join(PACKAGE_ROOT, 'prisma', 'schema.prisma');
   const config = path.join(PACKAGE_ROOT, 'prisma.config.ts');
   const dbFile = path.join(home, 'jobhunt.db');
 
-  await execFileAsync(prismaBin, ['migrate', 'deploy', '--schema', schema, '--config', config], {
+  await execFileAsync(process.execPath, [prismaCli, 'migrate', 'deploy', '--schema', schema, '--config', config], {
     env: { ...process.env, DATABASE_URL: `file:${dbFile}` },
   });
 

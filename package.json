@@ -17,7 +17,7 @@
   "scripts": {
     "prebuild": "prisma generate",
     "build": "nest build",
-    "postbuild": "chmod +x dist/main.js",
+    "postbuild": "node scripts/make-bin-executable.js",
     "start": "node dist/main.js",
     "dev": "nest start --watch",
     "test": "node --experimental-vm-modules node_modules/.bin/jest",

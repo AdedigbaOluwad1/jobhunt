@@ -2,11 +2,10 @@
 module.exports = {
   testEnvironment: 'node',
   rootDir: '.',
-  testRegex: '/test/.*\\.spec\\.ts$',
-  // Live adapter smoke tests hit real APIs and are opt-in only, via `npm run test:live`.
-  testPathIgnorePatterns: ['/node_modules/', '/test/live/'],
+  testRegex: '/test/live/.*\\.live\\.spec\\.ts$',
   transform: {
     '^.+\\.ts$': ['ts-jest', {}],
   },
   moduleFileExtensions: ['ts', 'js', 'json'],
+  testTimeout: 30_000,
 };

@@ -1,5 +1,6 @@
 import * as fs from 'node:fs';
 import { Injectable } from '@nestjs/common';
+import { isoWeekKey } from '../common/date';
 import { AppError } from '../common/errors';
 import { dbPath } from '../common/paths';
 import type { Application, Extraction, Job, SourceState, SyncRun } from '../generated/prisma/client';
@@ -312,4 +313,70 @@ export class JobsRepository {
   async createApplication(input: { jobId: number; cvPdfPath: string; tailoredJson: string }): Promise<Application> {
     return this.prisma.application.create({ data: input });
   }
+
+  async updateStatus(jobId: number, status: string, note?: string): Promise<Job> {
+    return this.prisma.job.update({
+      where: { id: jobId },
+      data: { status, statusNote: note, statusUpdatedAt: new Date() },
+    });
+  }
+
+  /** Sets appliedAt on the most recent Application for this job, if it isn't already set. */
+  async markLatestApplicationApplied(jobId: number): Promise<void> {
+    const application = await this.findApplicationByJobId(jobId);
+    if (application && !application.appliedAt) {
+      await this.prisma.application.update({ where: { id: application.id }, data: { appliedAt: new Date() } });
+    }
+  }
+
+  async getStats(): Promise<StatsResult> {
+    const jobs = await this.prisma.job.findMany({
+      select: { id: true, status: true, firstSeenAt: true, source: true, filterStatus: true, extraction: { select: { matchScore: true } } },
+    });
+    const applications = await this.prisma.application.findMany({ select: { createdAt: true, jobId: true } });
+    const jobById = new Map(jobs.map((j) => [j.id, j]));
+
+    const byStatus: Record<string, number> = {};
+    const seenPerWeek = new Map<string, number>();
+    const applicationsPerWeek = new Map<string, number>();
+    const sourceMatchCounts = new Map<string, number>();
+    const appliedScores: number[] = [];
+
+    for (const job of jobs) {
+      byStatus[job.status] = (byStatus[job.status] ?? 0) + 1;
+      const week = isoWeekKey(job.firstSeenAt);
+      seenPerWeek.set(week, (seenPerWeek.get(week) ?? 0) + 1);
+      if (job.filterStatus === 'passed' && job.extraction) {
+        sourceMatchCounts.set(job.source, (sourceMatchCounts.get(job.source) ?? 0) + 1);
+      }
+    }
+
+    for (const application of applications) {
+      const week = isoWeekKey(application.createdAt);
+      applicationsPerWeek.set(week, (applicationsPerWeek.get(week) ?? 0) + 1);
+      const job = jobById.get(application.jobId);
+      if (job?.extraction) appliedScores.push(job.extraction.matchScore);
+    }
+
+    const toSortedWeeks = (map: Map<string, number>) =>
+      [...map.entries()].sort(([a], [b]) => a.localeCompare(b)).map(([week, count]) => ({ week, count }));
+
+    const topSource = [...sourceMatchCounts.entries()].sort((a, b) => b[1] - a[1])[0];
+
+    return {
+      byStatus,
+      seenPerWeek: toSortedWeeks(seenPerWeek),
+      applicationsPerWeek: toSortedWeeks(applicationsPerWeek),
+      avgAppliedMatchScore: appliedScores.length ? appliedScores.reduce((a, b) => a + b, 0) / appliedScores.length : null,
+      topSourceByMatches: topSource ? { source: topSource[0], count: topSource[1] } : null,
+    };
+  }
+}
+
+export interface StatsResult {
+  byStatus: Record<string, number>;
+  seenPerWeek: Array<{ week: string; count: number }>;
+  applicationsPerWeek: Array<{ week: string; count: number }>;
+  avgAppliedMatchScore: number | null;
+  topSourceByMatches: { source: string; count: number } | null;
 }

@@ -40,9 +40,15 @@ export abstract class OpenAiCompatibleProvider implements LlmProvider {
       tool_choice: { type: 'function', function: { name: input.toolName } },
     });
 
-    const toolCall = completion.choices[0]?.message.tool_calls?.[0];
+    const choice = completion.choices[0];
+    const toolCall = choice?.message.tool_calls?.[0];
     if (!toolCall || toolCall.type !== 'function') {
-      throw new AppError('LLM_INVALID_OUTPUT', 'model did not return a tool call');
+      // Models that ignore a forced tool_choice reply in prose; the reply shows why.
+      const reply = (choice?.message.content ?? '').replace(/\s+/g, ' ').trim().slice(0, 200);
+      throw new AppError(
+        'LLM_INVALID_OUTPUT',
+        `model did not return a tool call (finish_reason: ${choice?.finish_reason ?? 'none'}, reply: ${reply ? `"${reply}"` : 'empty'})`,
+      );
     }
 
     let rawArgs: unknown;

@@ -1,6 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { AppError } from '../common/errors';
 import { AnthropicProvider } from './anthropic.provider';
+import { CloudflareProvider } from './cloudflare.provider';
 import { LocalProvider } from './local.provider';
 import { OllamaProvider } from './ollama.provider';
 import { OpenAiProvider } from './openai.provider';
@@ -22,8 +23,8 @@ interface ParsedModel {
 export class LlmService {
   private readonly providers: Record<ProviderName, LlmProvider>;
 
-  constructor(anthropic: AnthropicProvider, openai: OpenAiProvider, local: LocalProvider, ollama: OllamaProvider) {
-    this.providers = { anthropic, openai, local, ollama };
+  constructor(anthropic: AnthropicProvider, openai: OpenAiProvider, local: LocalProvider, ollama: OllamaProvider, cloudflare: CloudflareProvider) {
+    this.providers = { anthropic, openai, local, ollama, cloudflare };
   }
 
   callStructured<T>(input: StructuredCallInput<T>): Promise<StructuredCallResult<T>> {

@@ -47,10 +47,10 @@ automatically; the tool prepares everything and hands control back to you.
   offer, or rejected, with weekly stats.
 - **Local-first** — one SQLite database, no external services beyond the
   LLM calls you explicitly opt into.
-- **Multi-provider LLM support** — Anthropic, OpenAI, or an open-weight model
-  running locally (Ollama's native API, or any OpenAI-compatible server —
-  LM Studio, vLLM, llama.cpp server), mixed freely between extraction and
-  tailoring.
+- **Multi-provider LLM support** — Anthropic, OpenAI, Cloudflare Workers AI,
+  or an open-weight model running locally (Ollama's native API, or any
+  OpenAI-compatible server — LM Studio, vLLM, llama.cpp server), mixed
+  freely between extraction and tailoring.
 
 ## Requirements
 
@@ -58,7 +58,7 @@ automatically; the tool prepares everything and hands control back to you.
 |---|---|
 | Node.js | 20 or later |
 | npm | any recent version |
-| An LLM | required for match scoring and CV tailoring only — a hosted API key (Anthropic, OpenAI) or a local model server (e.g. Ollama) |
+| An LLM | required for match scoring and CV tailoring only — a hosted API key (Anthropic, OpenAI, Cloudflare Workers AI) or a local model server (e.g. Ollama) |
 | Chromium | required for CV tailoring only (`npx playwright install chromium`) |
 
 Every command other than `sync`'s extraction step and `tailor` works with
@@ -83,7 +83,7 @@ jobhunt init
 ~/.jobhunt/
 ├── config.yaml      Source watchlist, filters, profile, and runtime settings
 ├── master-cv.yaml   Your CV — the single source of truth for tailoring
-├── .env             ANTHROPIC_API_KEY / OPENAI_API_KEY (only for providers you use)
+├── .env             ANTHROPIC_API_KEY / OPENAI_API_KEY / CLOUDFLARE_API_TOKEN (only for providers you use)
 ├── jobhunt.db       SQLite database
 └── out/             Generated CV PDFs and their JSON source
 ```
@@ -167,6 +167,7 @@ model for high-volume extraction and a hosted one for tailoring:
 | `openai` | `openai/gpt-4o-mini` | `OPENAI_API_KEY` in `.env` or the environment |
 | `ollama` | `ollama/qwen3.6:latest` | none required |
 | `local` | `local/llama3.1` | none required |
+| `cloudflare` | `cloudflare/@cf/meta/llama-3.3-70b-instruct-fp8-fast` | `CLOUDFLARE_API_TOKEN` in `.env` or the environment, plus `accountId` in config |
 
 **`ollama`** talks to [Ollama](https://ollama.com)'s native `/api/chat`
 directly (not its OpenAI-compatible endpoint) and defaults to Ollama's
@@ -200,6 +201,19 @@ calls through a proxy. Structured output (match scoring, CV tailoring) is
 implemented with tool/function calling, so a local model needs reasonably
 capable tool-calling support (e.g. Llama 3.1+, Qwen2.5+) — smaller or
 older models may fail to produce a valid tool call.
+
+**`cloudflare`** targets [Workers AI](https://developers.cloudflare.com/workers-ai/)
+through its OpenAI-compatible endpoint. Pick a model that supports function
+calling, since every call forces a single tool call. Set your account ID in
+config and the API token (with Workers AI permission) in `.env`:
+
+```yaml
+llm:
+  providers:
+    cloudflare: { accountId: <your-account-id> }
+```
+
+`baseUrl` overrides the derived URL, for example to route through AI Gateway.
 
 ### Example: `master-cv.yaml`
 
@@ -317,6 +331,8 @@ key is a startup error, not a silent no-op.
 | `llm.providers.openai.baseUrl` | string | OpenAI's API | Overrides the OpenAI API base URL, e.g. to route through a proxy. |
 | `llm.providers.ollama.baseUrl` | string | `http://localhost:11434` | Overrides Ollama's native API address. |
 | `llm.providers.ollama.think` | boolean | `false` | Passed as Ollama's native `think` option; `false` skips hidden reasoning on thinking-capable models. |
+| `llm.providers.cloudflare.accountId` | string | — | Cloudflare account ID; required for `cloudflare/…` models. The Workers AI base URL is derived from it. |
+| `llm.providers.cloudflare.baseUrl` | string | derived from `accountId` | Overrides the Workers AI base URL, e.g. to route through AI Gateway. |
 | `llm.providers.local.baseUrl` | string | `http://localhost:11434/v1` | Overrides the local OpenAI-compatible server's base URL (LM Studio, vLLM, llama.cpp server, …). |
 | `sync.httpConcurrency` | number | — | Max concurrent HTTP fetches per sync. |
 | `sync.httpTimeoutMs` | number | — | Per-request timeout. |
@@ -570,7 +586,7 @@ src/
 ├── db/        Prisma client and the single repository all data access goes through
 ├── sources/   One adapter per source, behind a shared interface
 ├── jobs/      Normalization, deduplication, filtering, extraction, and the sync pipeline
-├── llm/       Multi-provider LLM integration (Anthropic, OpenAI, Ollama native, OpenAI-compatible local)
+├── llm/       Multi-provider LLM integration (Anthropic, OpenAI, Cloudflare, Ollama native, OpenAI-compatible local)
 ├── cv/        Master CV schema, tailoring, fabrication validator, PDF rendering
 └── commands/  CLI command definitions
 ```

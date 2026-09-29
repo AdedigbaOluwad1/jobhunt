@@ -1,8 +1,8 @@
 import { z } from 'zod';
 
-export type ProviderName = 'anthropic' | 'openai' | 'local' | 'ollama';
+export type ProviderName = 'anthropic' | 'openai' | 'local' | 'ollama' | 'cloudflare';
 
-export const PROVIDER_NAMES: readonly ProviderName[] = ['anthropic', 'openai', 'local', 'ollama'];
+export const PROVIDER_NAMES: readonly ProviderName[] = ['anthropic', 'openai', 'local', 'ollama', 'cloudflare'];
 
 export class LlmValidationError extends Error {
   constructor(

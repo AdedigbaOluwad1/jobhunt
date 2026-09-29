@@ -69,6 +69,15 @@ const ProviderOverrideSchema = z
   })
   .strict();
 
+const CloudflareProviderOverrideSchema = z
+  .object({
+    /** Cloudflare account ID; the Workers AI base URL is derived from it. */
+    accountId: z.string().optional(),
+    /** Overrides the derived base URL, e.g. to route through AI Gateway. */
+    baseUrl: z.string().optional(),
+  })
+  .strict();
+
 const OllamaProviderOverrideSchema = z
   .object({
     baseUrl: z.string().optional(),
@@ -80,7 +89,7 @@ const OllamaProviderOverrideSchema = z
 const LlmSchema = z
   .object({
     // "<provider>/<model>", e.g. "anthropic/claude-haiku-4-5-20251001", "openai/gpt-4o-mini",
-    // "local/llama3.1" (any OpenAI-compatible local server), "ollama/qwen3.6:latest" (Ollama's native API).
+    // "local/llama3.1" (any OpenAI-compatible local server), "ollama/qwen3.6:latest" (Ollama's native API), "cloudflare/@cf/meta/llama-3.3-70b-instruct-fp8-fast".
     extractionModel: z.string(),
     tailorModel: z.string(),
     maxDescriptionChars: z.number().int().positive(),
@@ -90,6 +99,7 @@ const LlmSchema = z
         openai: ProviderOverrideSchema.optional(),
         local: ProviderOverrideSchema.optional(),
         ollama: OllamaProviderOverrideSchema.optional(),
+        cloudflare: CloudflareProviderOverrideSchema.optional(),
       })
       .strict()
       .optional(),

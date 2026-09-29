@@ -30,7 +30,7 @@ llm:
   # Models are "<provider>/<model>": anthropic, openai, ollama (Ollama's native API —
   # preferred for Ollama, since it's the only one that can turn off "thinking" on
   # thinking-capable models), or local (any OTHER OpenAI-compatible local server —
-  # LM Studio, vLLM, llama.cpp server). Mix providers freely — e.g. a local model
+  # LM Studio, vLLM, llama.cpp server), or cloudflare (Workers AI). Mix providers freely — e.g. a local model
   # for high-volume extraction, a hosted one for tailoring.
   extractionModel: anthropic/claude-haiku-4-5-20251001   # cheap, high volume; verify current model IDs in Anthropic docs
   tailorModel: anthropic/claude-sonnet-5                 # better writing; verify current model IDs
@@ -40,6 +40,7 @@ llm:
   #   openai: { baseUrl: https://api.openai.com/v1 }        # only needed to point at a proxy
   #   ollama: { baseUrl: http://localhost:11434, think: false }  # think: false is the default; set true for a reasoning pass
   #   local:  { baseUrl: http://localhost:1234/v1 }         # any other OpenAI-compatible runtime
+  #   cloudflare: { accountId: <your-account-id> }          # Workers AI; token goes in CLOUDFLARE_API_TOKEN
 
 sync:
   httpConcurrency: 5

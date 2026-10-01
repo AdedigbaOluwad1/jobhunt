@@ -7,6 +7,7 @@ import { SourcesService } from '../sources/sources.service';
 import { resolveDuplicate } from './dedupe';
 import { ExtractorService } from './extractor.service';
 import { FilterResult, FilterService } from './filter.service';
+import { MANUAL_SOURCE } from './manual-job.service';
 import { normalize } from './normalize';
 
 export interface SyncOptions {
@@ -259,6 +260,8 @@ export class SyncService {
   private async reevaluateFilters(stats: SyncStats): Promise<void> {
     const jobs = await this.jobsRepository.findAllNonClosed();
     for (const job of jobs) {
+      // Jobs added by hand were chosen explicitly; config filters must not hide them later.
+      if (job.source === MANUAL_SOURCE) continue;
       const result = this.filterService.evaluate(job);
       if (result.status !== job.filterStatus || result.reason !== job.filterReason) {
         await this.jobsRepository.updateFilterResult(job.id, result.status, result.reason);

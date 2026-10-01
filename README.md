@@ -426,6 +426,39 @@ default, only non-closed, non-duplicate, filter-passed jobs are shown.
 | `--limit <n>` | Row limit (default 20). |
 | `--format md` | Markdown table with linked titles, e.g. `jobhunt list --format md > digest.md`. |
 
+### `jobhunt add <url>`
+
+```
+jobhunt add <url> [-c <company>] [-t <title>] [-l <location>] [--remote] [-f <file|->] [--no-extract]
+```
+
+Tracks one job from any URL — a careers page, a job board, a LinkedIn posting —
+for companies that don't expose a feed `sync` can read. The job is stored with
+source `manual`, scored against your profile like any synced job, and is never
+hidden by the `filters` in `config.yaml` or closed by a later sync.
+
+The page is fetched and read from its schema.org `JobPosting` data (which most
+ATSs and job boards embed), falling back to the page's meta tags and visible
+text. Tracking parameters and fragments are stripped from the URL, so re-adding
+the same posting updates it instead of duplicating it.
+
+| Flag | Effect |
+|---|---|
+| `-c, --company`, `-t, --title`, `-l, --location` | Override (or supply) what the page doesn't state. Company and title are required if the page lacks them. |
+| `--remote` | Mark the job as remote. |
+| `-f, --description-file <path>` | Use this description instead of fetching the page; `-` reads stdin. |
+| `--no-extract` | Skip LLM scoring. |
+
+LinkedIn is never fetched (it's login-walled); copy the description from the
+page instead:
+
+```
+pbpaste | jobhunt add "https://www.linkedin.com/jobs/view/123" -c OPay -t "DevOps Engineer" -f -
+```
+
+Pages that load their job text with JavaScript yield no description and fail
+with the same hint to paste it.
+
 ### `jobhunt show <id>`
 
 ```
@@ -560,7 +593,7 @@ jobhunt sources check
 Typical workflow:
 
 ```
-jobhunt sync → jobhunt list → jobhunt show <id> → jobhunt tailor <id> → jobhunt apply <id> --mark → jobhunt status <id> interview
+jobhunt sync (or jobhunt add <url>) → jobhunt list → jobhunt show <id> → jobhunt tailor <id> → jobhunt apply <id> --mark → jobhunt status <id> interview
 ```
 
 All data is stored locally: `~/.jobhunt/jobhunt.db` (SQLite),

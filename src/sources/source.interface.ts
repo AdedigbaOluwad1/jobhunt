@@ -9,6 +9,7 @@ export type SourceName =
   | 'breezy'
   | 'smartrecruiters'
   | 'jazzhr'
+  | 'manual'
   | 'remotive'
   | 'remoteok'
   | 'wwr';

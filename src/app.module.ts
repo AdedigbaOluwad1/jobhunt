@@ -1,4 +1,5 @@
 import { Module } from '@nestjs/common';
+import { AddCommand } from './commands/add.command';
 import { ApplyCommand } from './commands/apply.command';
 import { DismissCommand } from './commands/dismiss.command';
 import { InitCommand } from './commands/init.command';
@@ -26,6 +27,7 @@ import { SourcesModule } from './sources/sources.module';
   providers: [
     InitCommand,
     SyncCommand,
+    AddCommand,
     ListCommand,
     ShowCommand,
     SourcesCommand,

@@ -5,11 +5,12 @@ import { LlmModule } from '../llm/llm.module';
 import { SourcesModule } from '../sources/sources.module';
 import { ExtractorService } from './extractor.service';
 import { FilterService } from './filter.service';
+import { ManualJobService } from './manual-job.service';
 import { SyncService } from './sync.service';
 
 @Module({
   imports: [ConfigModule, SourcesModule, DbModule, LlmModule],
-  providers: [SyncService, FilterService, ExtractorService],
-  exports: [SyncService, FilterService, ExtractorService],
+  providers: [SyncService, FilterService, ExtractorService, ManualJobService],
+  exports: [SyncService, FilterService, ExtractorService, ManualJobService],
 })
 export class JobsModule {}

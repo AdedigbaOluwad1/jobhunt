@@ -2,6 +2,7 @@ import { JobsRepository } from '../src/db/jobs.repository';
 import { PrismaService } from '../src/db/prisma.service';
 import { ExtractorService } from '../src/jobs/extractor.service';
 import { FilterService } from '../src/jobs/filter.service';
+import { normalize } from '../src/jobs/normalize';
 import { SyncService } from '../src/jobs/sync.service';
 import { JobSource, RawJob, SourceTarget } from '../src/sources/source.interface';
 import { SourcesService } from '../src/sources/sources.service';
@@ -216,6 +217,23 @@ describe('SyncService', () => {
     const job = await jobsRepository.findExistingByKey('greenhouse', 'acme', '1');
     expect(job?.filterStatus).toBe('rejected');
     expect(job?.filterReason).toBe('title-no-match');
+  });
+
+  it('never reclassifies a manually added job, even when the filters would reject it', async () => {
+    const strict = makeTestConfig({ filters: { ...makeTestConfig().filters, titleInclude: ['frontend'] } });
+    const configService = { load: () => strict } as unknown as ConfigService;
+    const sourcesService = { all: () => [], bySourceName: () => undefined } as unknown as SourcesService;
+    const sync = new SyncService(configService, sourcesService, jobsRepository, new FilterService(configService), makeNoopExtractorService());
+    await jobsRepository.upsertJob(normalize(rawJob({ source: 'manual', board: 'manual', externalId: 'https://example.com/j/1' })), {
+      status: 'passed',
+      reason: null,
+    });
+
+    const stats = await sync.sync();
+
+    expect(stats.reclassified).toBe(0);
+    const job = await jobsRepository.findExistingByKey('manual', 'manual', 'https://example.com/j/1');
+    expect(job?.filterStatus).toBe('passed');
   });
 
   describe('minIntervalHours throttling (remote-board sources)', () => {

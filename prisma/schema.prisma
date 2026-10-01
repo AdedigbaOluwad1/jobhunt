@@ -10,7 +10,7 @@ datasource db {
 
 model Job {
   id              Int       @id @default(autoincrement())
-  source          String // greenhouse | lever | ashby | remotive | remoteok | wwr
+  source          String // an ATS name, a remote board (remotive | remoteok | wwr), or manual (`jobhunt add`)
   board           String // ATS slug, or feed name for remote boards
   externalId      String
   company         String

@@ -93,10 +93,6 @@ function pageText(html: string): string {
   return collapseWhitespace(stripHtml(cleaned));
 }
 
-/**
- * Prefers the schema.org JobPosting JSON-LD that most ATS and job boards embed for Google Jobs;
- * falls back to meta tags and the visible page text for custom careers pages.
- */
 export function parseJobPage(html: string): ParsedJobPage {
   for (const node of jsonLdNodes(html)) {
     if (isJobPosting(node)) {
@@ -113,7 +109,6 @@ export function parseJobPage(html: string): ParsedJobPage {
   };
 }
 
-/** Drops fragments and tracking params so re-adding the same posting from a shared link hits the same row. */
 export function canonicalizeUrl(raw: string): URL {
   let url: URL;
   try {

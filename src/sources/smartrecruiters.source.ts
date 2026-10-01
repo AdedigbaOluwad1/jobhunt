@@ -7,7 +7,6 @@ import { fetchFailure, shapeFailure, toDate } from './adapter-helpers';
 import { JobSource, RawJob, SourceName, SourceTarget } from './source.interface';
 
 const PAGE_SIZE = 100;
-// The list endpoint omits descriptions, so every posting costs a detail request.
 const DETAIL_CONCURRENCY = 4;
 
 const ListItemSchema = z.object({

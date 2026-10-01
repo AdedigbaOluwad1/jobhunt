@@ -8,7 +8,6 @@ import { ConfigService } from '../config/config.service';
 import { fetchFailure, shapeFailure, toDate } from './adapter-helpers';
 import { JobSource, RawJob, SourceName, SourceTarget } from './source.interface';
 
-// JazzHR has no public JSON API: the listing is server-rendered HTML and each posting page embeds schema.org JobPosting JSON-LD.
 const DETAIL_CONCURRENCY = 4;
 
 const LIST_ITEM_PATTERN =
@@ -46,7 +45,7 @@ function parseJobPosting(html: string): z.infer<typeof JobPostingSchema> | undef
       const parsed = JobPostingSchema.safeParse(JSON.parse(match[1]));
       if (parsed.success) return parsed.data;
     } catch {
-      // a malformed JSON-LD block elsewhere on the page shouldn't hide a valid one
+      continue;
     }
   }
   return undefined;
@@ -90,7 +89,6 @@ export class JazzHrSource implements JobSource {
           } catch (err) {
             throw fetchFailure(`${label}/${entry.id}`, err, 'posting not found');
           }
-          // Some postings (e.g. ones without a posted date) omit the JobPosting JSON-LD but still render the description.
           const posting = parseJobPosting(detailHtml) ?? { description: DESCRIPTION_PATTERN.exec(detailHtml)?.[1] };
           if (!posting.description) {
             throw shapeFailure(

@@ -38,10 +38,6 @@ type Item = z.infer<typeof ItemSchema>;
 
 const xmlParser = new XMLParser({ processEntities: true });
 
-/**
- * `board` is the careers-site host, e.g. "careers.paystack.com" or "acme.teamtailor.com".
- * Teamtailor has no public company slug API, but every careers site serves /jobs.rss.
- */
 @Injectable()
 export class TeamtailorSource implements JobSource {
   readonly name: SourceName = 'teamtailor';

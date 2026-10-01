@@ -10,7 +10,6 @@ interface AddCommandOptions {
   location?: string;
   remote?: boolean;
   descriptionFile?: string;
-  /** Commander's negatable `--no-extract`: defaults to true, false when passed. */
   extract?: boolean;
 }
 
@@ -66,7 +65,6 @@ export class AddCommand extends CommandRunner {
       const score = analysed.extraction?.matchScore;
       if (score !== undefined) console.log(`match score: ${score}`);
     } catch (err) {
-      // The job is saved either way; a missing API key shouldn't make `add` look like it failed.
       console.log(`not scored: ${err instanceof Error ? err.message : String(err)}`);
     }
     console.log(`next: jobhunt show ${jobId}  |  jobhunt tailor ${jobId}`);

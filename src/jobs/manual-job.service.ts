@@ -10,7 +10,6 @@ import { normalize } from './normalize';
 
 export const MANUAL_SOURCE = 'manual';
 
-/** Below this, a fetched page is almost certainly a JS shell or login wall rather than a posting. */
 const MIN_FETCHED_DESCRIPTION_CHARS = 200;
 
 export interface AddJobInput {
@@ -19,7 +18,6 @@ export interface AddJobInput {
   title?: string;
   location?: string;
   remote?: boolean;
-  /** Pasted description; skips fetching the page entirely. */
   description?: string;
 }
 
@@ -66,7 +64,6 @@ export class ManualJobService {
     };
 
     const normalized = normalize(raw);
-    // An explicitly added job is wanted regardless of the sync filters.
     const { job, status } = await this.jobsRepository.upsertJob(normalized, { status: 'passed', reason: null });
 
     const similarJob =

@@ -41,7 +41,6 @@ const DetailResponseSchema = z.object({
 type ListItem = z.infer<typeof ListItemSchema>;
 
 const JSON_HEADERS = { Accept: 'application/json' };
-// BambooHR's list endpoint omits descriptions, so every opening costs a detail request.
 const DETAIL_CONCURRENCY = 4;
 
 @Injectable()

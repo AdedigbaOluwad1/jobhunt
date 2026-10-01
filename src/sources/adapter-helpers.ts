@@ -15,7 +15,6 @@ export function toDate(value?: string | number | null): Date | undefined {
   return Number.isNaN(date.getTime()) ? undefined : date;
 }
 
-/** Turns a failed fetch into the uniform AppError the sync summary and `sources check` print. */
 export function fetchFailure(label: string, err: unknown, notFoundHint: string): AppError {
   if (err instanceof HttpError && err.status === 404) {
     return new AppError('SOURCE_FETCH_FAILED', `${label} — ${notFoundHint} (404)`);

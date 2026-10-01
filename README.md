@@ -28,7 +28,8 @@ automatically; the tool prepares everything and hands control back to you.
 
 ## Features
 
-- **Multi-source aggregation** — Greenhouse, Lever, and Ashby boards, plus
+- **Multi-source aggregation** — Greenhouse, Lever, Ashby, Workable, Recruitee,
+  BambooHR, Teamtailor, Breezy, SmartRecruiters, and JazzHR boards, plus
   Remotive, RemoteOK, and We Work Remotely, unified behind one adapter
   interface.
 - **Deterministic filtering** — title/location/age/description rules run
@@ -118,6 +119,13 @@ sources:
   greenhouse: [stripe, figma]        # board tokens — see `jobhunt sources add` to find more
   lever: [veeva]                     # company slugs
   ashby: [linear, ramp]              # job board names
+  workable: []                       # apply.workable.com/<slug>
+  recruitee: []                      # <slug>.recruitee.com
+  bamboohr: []                       # <slug>.bamboohr.com
+  teamtailor: []                     # careers-site host, e.g. careers.example.com
+  breezy: []                         # <slug>.breezy.hr
+  smartrecruiters: []                # jobs.smartrecruiters.com/<Identifier>
+  jazzhr: []                         # <slug>.applytojob.com
   remote:
     remotive: { enabled: true, categories: [software-dev], minIntervalHours: 12 }
     remoteok: { enabled: true, minIntervalHours: 12 }
@@ -309,6 +317,13 @@ key is a startup error, not a silent no-op.
 | `sources.lever` | string[] | `[]` | Lever company slugs. |
 | `sources.lever_eu` | string[] | `[]` | Lever slugs hosted on `api.eu.lever.co`. |
 | `sources.ashby` | string[] | `[]` | Ashby job board names. |
+| `sources.workable` | string[] | `[]` | Workable account slugs (`apply.workable.com/<slug>`). |
+| `sources.recruitee` | string[] | `[]` | Recruitee subdomains (`<slug>.recruitee.com`). |
+| `sources.bamboohr` | string[] | `[]` | BambooHR subdomains (`<slug>.bamboohr.com`). |
+| `sources.teamtailor` | string[] | `[]` | Teamtailor careers-site hosts, e.g. `careers.example.com`. |
+| `sources.breezy` | string[] | `[]` | Breezy subdomains (`<slug>.breezy.hr`). |
+| `sources.smartrecruiters` | string[] | `[]` | SmartRecruiters company identifiers. |
+| `sources.jazzhr` | string[] | `[]` | JazzHR subdomains (`<slug>.applytojob.com`). |
 | `sources.companyNames` | map&lt;string,string&gt; | — | Optional slug → display-name override. |
 | `sources.remote.remotive.enabled` | boolean | — | Enables the Remotive adapter. |
 | `sources.remote.remotive.categories` | string[] | `[software-dev]` | One sync target per category. |
@@ -505,8 +520,9 @@ jobhunt sources check
 
 ## Architecture
 
-1. **Sources** — `greenhouse`, `lever`, and `ashby` query each ATS's public
-   API directly. `remotive`, `remoteok`, and `wwr` are remote-job
+1. **Sources** — `greenhouse`, `lever`, `ashby`, `workable`, `recruitee`,
+   `bamboohr`, `teamtailor`, `breezy`, `smartrecruiters`, and `jazzhr` query each ATS's
+   public API (or RSS feed) directly. `remotive`, `remoteok`, and `wwr` are remote-job
    aggregators, each throttled by `minIntervalHours` and always linking
    back to the aggregator's own listing rather than the employer, per each
    site's terms of use.

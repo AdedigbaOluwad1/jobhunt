@@ -14,10 +14,7 @@ function makeSource(enabled = true) {
     load: () =>
       makeTestConfig({
         sources: {
-          greenhouse: [],
-          lever: [],
-          lever_eu: [],
-          ashby: [],
+          ...makeTestConfig().sources,
           remote: { remoteok: { enabled, minIntervalHours: 12 } },
         },
       }),

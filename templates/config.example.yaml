@@ -13,6 +13,13 @@ sources:
   lever: [spotify]                   # company slugs
   ashby: [linear, ramp]              # job board names
   # lever_eu: [somecompany]          # EU-hosted Lever accounts, if needed
+  workable: []                       # apply.workable.com/<slug>
+  recruitee: []                      # <slug>.recruitee.com
+  bamboohr: []                       # <slug>.bamboohr.com
+  teamtailor: []                     # careers-site host, e.g. careers.example.com
+  breezy: []                         # <slug>.breezy.hr
+  smartrecruiters: []                # jobs.smartrecruiters.com/<Identifier>
+  jazzhr: []                         # <slug>.applytojob.com
   remote:
     remotive: { enabled: true, categories: [software-dev], minIntervalHours: 12 }
     remoteok: { enabled: true, minIntervalHours: 12 }

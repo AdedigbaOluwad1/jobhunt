@@ -14,6 +14,13 @@ export function makeTestConfig(overrides: Partial<AppConfig> = {}): AppConfig {
       lever: [],
       lever_eu: [],
       ashby: [],
+      workable: [],
+      recruitee: [],
+      bamboohr: [],
+      teamtailor: [],
+      breezy: [],
+      smartrecruiters: [],
+      jazzhr: [],
     },
     filters: {
       titleInclude: [],

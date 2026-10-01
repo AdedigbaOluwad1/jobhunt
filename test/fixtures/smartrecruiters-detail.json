@@ -1,0 +1,173 @@
+{
+ "id": "744000152849704",
+ "name": "Sales Representative - Mobility Aftermarket",
+ "uuid": "1180940e-01b6-42a5-9b79-c25dcb63da6c",
+ "jobId": "d141b124-83e5-4507-922d-aa2f8467f7a4",
+ "jobAdId": "a61228df-c809-4b3a-aa42-02b3aefb71d9",
+ "defaultJobAd": true,
+ "refNumber": "REF297397X",
+ "company": {
+  "name": "Bosch Group",
+  "identifier": "BoschGroup"
+ },
+ "location": {
+  "city": "Koropi",
+  "region": "Attika",
+  "country": "gr",
+  "address": "Ercheias 37",
+  "postalCode": "19400",
+  "remote": false,
+  "hybrid": true,
+  "fullLocation": "Koropi, Attika, Greece"
+ },
+ "customField": [
+  {
+   "fieldId": "5abe2a4ab60a5e486a2d9b1d",
+   "fieldLabel": "Contract type",
+   "valueId": "1e46492b-d24f-460c-b095-38cf08a778d8",
+   "valueLabel": "Unlimited"
+  },
+  {
+   "fieldId": "5abe28e96d8bc56863dd9746",
+   "fieldLabel": "Tariff Area",
+   "valueId": "02a2e6fb-afd0-4fe6-9805-0d4dd3326ae9",
+   "valueLabel": "Greece Local Grades"
+  },
+  {
+   "fieldId": "586a997ee4b05fd937b86098",
+   "fieldLabel": "Legal Entity(acronym)",
+   "valueId": "affe6ab1-7e05-4b41-ae7f-1f640147e7dd",
+   "valueLabel": "RBGR"
+  },
+  {
+   "fieldId": "586a99b5e4b0daa006ae1079",
+   "fieldLabel": "Working Location",
+   "valueId": "1e0a1ee2-67c4-4c59-96f6-3797df81b901",
+   "valueLabel": "Athens"
+  },
+  {
+   "fieldId": "5abe295a6d8bc56863dd9747",
+   "fieldLabel": "Global Salary Level",
+   "valueId": "80ae06a1-4738-48e8-8aea-4613f58ecd57",
+   "valueLabel": "Others"
+  },
+  {
+   "fieldId": "69ca83a2489188782a1e9f87",
+   "fieldLabel": "Direct Or Indirect",
+   "valueId": "1aefbf4c-c10a-422e-a975-a504a7117792",
+   "valueLabel": "Indirect"
+  },
+  {
+   "fieldId": "5abe29f9b60a5e486a2d9b1c",
+   "fieldLabel": "Working hours",
+   "valueId": "60756b3e-dbab-4353-ac3a-0064d2bb27d8",
+   "valueLabel": "Full-time"
+  },
+  {
+   "fieldId": "586a9995e4b0daa006ae1078",
+   "fieldLabel": "Legal Entity",
+   "valueId": "93b94427-96fc-41e8-9dc4-435eb173dee3",
+   "valueLabel": "Robert Bosch Greece"
+  },
+  {
+   "fieldId": "691cf1c93001c782b9560ab7",
+   "fieldLabel": "Division full name",
+   "valueId": "b2e47e43-790d-4acb-871a-2ed61d7177ba",
+   "valueLabel": "Mobility Aftermarket"
+  },
+  {
+   "fieldId": "5abe27936d8bc56863dd9745",
+   "fieldLabel": "Position type",
+   "valueId": "c7b4da31-6f38-405a-b2e8-08a76e3c3f2c",
+   "valueLabel": "Professional"
+  },
+  {
+   "fieldId": "COUNTRY",
+   "fieldLabel": "Country/Region",
+   "valueId": "gr",
+   "valueLabel": "Greece"
+  },
+  {
+   "fieldId": "586a971ee4b0daa006ae1077",
+   "fieldLabel": "Brands",
+   "valueId": "default",
+   "valueLabel": "Bosch Group"
+  },
+  {
+   "fieldId": "586a996ce4b05fd937b86097",
+   "fieldLabel": "Working Country",
+   "valueId": "70c68dbc-f2d0-43e8-8b96-4b05baadc15e",
+   "valueLabel": "Greece"
+  },
+  {
+   "fieldId": "586a9b22e4b05fd937b8609a",
+   "fieldLabel": "Local Grade",
+   "valueId": "a273f4a7-5acb-471f-9839-54beef4159d2",
+   "valueLabel": "GR_belowSL1"
+  },
+  {
+   "fieldId": "586a99a5e4b05fd937b86099",
+   "fieldLabel": "Division",
+   "valueId": "AA",
+   "valueLabel": "MA"
+  }
+ ],
+ "releasedDate": "2026-10-01T07:03:08.633Z",
+ "creator": {
+  "name": "",
+  "avatarUrl": ""
+ },
+ "postingUrl": "https://jobs.smartrecruiters.com/BoschGroup/744000152849704-sales-representative-mobility-aftermarket",
+ "applyUrl": "https://jobs.smartrecruiters.com/BoschGroup/744000152849704-sales-representative-mobility-aftermarket?oga=true",
+ "referralUrl": "https://jobs.smartrecruiters.com/external-referrals/company/BoschGroup/publication/1180940e-01b6-42a5-9b79-c25dcb63da6c?dcr_ci=BoschGroup",
+ "jobAd": {
+  "sections": {
+   "companyDescription": {
+    "title": "Company Description",
+    "text": "<p><strong>Welcome to a place where your ideas lead to something big. Welcome to Bosch. </strong></p><p>At Bosch, we shape the future by inventing high-quality technologies and services that spark enthusiasm and enrich people\u2019s lives.</p><p>Whether in areas of mobility, industrial technology, consumer goods, or energy and building technology: Bosch makes a decisive contribution to improving the quality of life of this generation and those to come. This is only possible with a global network of more than 420,000 highly committed employees, with pioneers who break new technical ground every day.</p><p>Our promise to our associates is rock-solid: we grow together, we enjoy our work, and we inspire each other. Join in and feel the difference.<em> </em><strong>#LikeABosch</strong></p>"
+   },
+   "jobDescription": {
+    "title": "Job Description",
+    "text": "<p><strong>Your contribution to something big</strong></p><p>We are looking for an energetic and results-driven <strong>Sales Representative</strong> to join our <strong>Mobility Aftermarket</strong> department. Our business operations cover the markets of Greece, Cyprus, Albania, and Malta. Your main goal is to help our business grow, hit sales targets and be a trusted partner to our customers.</p><p><strong>Key responsibilities: </strong></p><ul><li>Develop and execute our commercial strategy to achieve sales targets and built long-term partnerships.</li><li>Serve as the primary contact person of your accounts ensuring a high-quality customer experience.</li><li>Identify and capitalize on new sales opportunities within your existing portfolio to expand our market position.</li><li>Analyze market trends&#xa0;customer behavior to inform our strategic plans and enhance our offerings.</li><li>Partner closely with internal cross-functional teams to ensure timely delivery that exceeds customer expectations.</li><li>Monitor account performance, sales metrics, and market developments, providing clear reports to senior management.</li></ul>"
+   },
+   "qualifications": {
+    "title": "Qualifications",
+    "text": "<p><strong>What distinguishes you:</strong></p><ul><li>At least for 4 years of previous experience in B2B sales.</li><li>Academic background in Business Administration or Engineering.</li><li>Advanced proficiency in MS Office and ERP systems.</li><li>Fluency in both Greek &amp; English.</li><li>A strategic thinker with powerful sales drive, strong financial acumen and exceptional negotiation skills.</li><li>Outstanding communication and interpersonal skills.</li><li>A collaborative team player with high integrity, a customer-centric focus, and a strong drive for results and professional growth.</li><li>Ability to navigate change, embrace digitalization and perform effectively under pressure.</li><li>Availability for regular travel.</li></ul>"
+   },
+   "additionalInformation": {
+    "title": "Additional Information",
+    "text": "<p><strong>What we offer you:</strong>\u200b\u200b\u200b\u200b</p><p>\ud83d\udcbc&#xa0;<strong>Excellent career opportunity </strong>\u2013 A clear career path within a leading global organization.</p><p>\ud83d\udcb0&#xa0;<strong>Competitive remuneration package </strong>\u2013<strong> </strong>Including performance based bonus &amp; company car</p><p>\u2764\ufe0f <strong>Private life &amp; medical insurance and pension plan</strong> \u2013 To secure your health &amp; plan your future</p><p>\ud83d\udcda&#xa0;<strong>Continuous learning and upskilling </strong>\u2013 Comprehensive mentorship from industry leaders with opportunities for professional development &amp; networking.</p><p>\ud83c\udf0d <strong>Inclusive and diverse culture </strong>\u2013 Join a diverse community that values different perspectives, fosters innovation, creativity &amp; personal growth.</p><p>&#xa0;\ud83c\udfe1 <strong>Hybrid work model</strong>&#xa0;- Balance in-office collaboration with remote flexibility.</p><p>&#xa0;\ud83c\udf7d\ufe0f&#xa0;<strong>Complimentary meals</strong>&#xa0;- Fully subsidized meals at our company restaurant.</p><p>&#xa0; \ud83c\udfcb\ufe0f\u200d\u2642\ufe0f&#xa0;<strong>Fitness center access</strong>&#xa0;- Stay active with our on-site fitness facilities.</p><p>&#xa0;\u26f1\ufe0f<strong>Additional vacation days</strong> - Giving you more time to rest and recharge.</p>"
+   },
+   "videos": {
+    "title": "Videos To Watch",
+    "urls": [
+     "https://www.youtube.com/watch?v=VTDB3mKx7jM",
+     "https://www.youtube.com/watch?v=MkthoupAgOg"
+    ]
+   }
+  }
+ },
+ "active": true,
+ "visibility": "PUBLIC",
+ "industry": {
+  "id": "mechanical_engineering",
+  "label": "Mechanical Or Industrial Engineering"
+ },
+ "function": {
+  "id": "sales",
+  "label": "Sales"
+ },
+ "experienceLevel": {
+  "id": "associate",
+  "label": "Associate"
+ },
+ "typeOfEmployment": {
+  "id": "permanent",
+  "label": "Full-time"
+ },
+ "language": {
+  "code": "en",
+  "label": "English",
+  "labelNative": "English (US)"
+ }
+}

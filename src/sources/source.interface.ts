@@ -1,7 +1,31 @@
-export type SourceName = 'greenhouse' | 'lever' | 'ashby' | 'remotive' | 'remoteok' | 'wwr';
+export type SourceName =
+  | 'greenhouse'
+  | 'lever'
+  | 'ashby'
+  | 'workable'
+  | 'recruitee'
+  | 'bamboohr'
+  | 'teamtailor'
+  | 'breezy'
+  | 'smartrecruiters'
+  | 'jazzhr'
+  | 'remotive'
+  | 'remoteok'
+  | 'wwr';
 
 /** Application-tracking-system sources win dedupe ties against remote-board aggregators. */
-export const ATS_SOURCES: readonly SourceName[] = ['greenhouse', 'lever', 'ashby'];
+export const ATS_SOURCES: readonly SourceName[] = [
+  'greenhouse',
+  'lever',
+  'ashby',
+  'workable',
+  'recruitee',
+  'bamboohr',
+  'teamtailor',
+  'breezy',
+  'smartrecruiters',
+  'jazzhr',
+];
 
 export function isAtsSource(source: string): boolean {
   return (ATS_SOURCES as readonly string[]).includes(source);

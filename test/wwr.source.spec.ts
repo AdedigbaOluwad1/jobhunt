@@ -14,10 +14,7 @@ function makeSource(feeds: string[] = ['remote-programming-jobs']) {
     load: () =>
       makeTestConfig({
         sources: {
-          greenhouse: [],
-          lever: [],
-          lever_eu: [],
-          ashby: [],
+          ...makeTestConfig().sources,
           remote: { wwr: { enabled: true, feeds, minIntervalHours: 12 } },
         },
       }),
@@ -30,7 +27,7 @@ describe('WwrSource', () => {
 
   it('produces no targets when disabled', () => {
     const configService = {
-      load: () => makeTestConfig({ sources: { greenhouse: [], lever: [], lever_eu: [], ashby: [] } }),
+      load: () => makeTestConfig({ sources: makeTestConfig().sources }),
     } as unknown as ConfigService;
     expect(new WwrSource(configService).targets()).toEqual([]);
   });

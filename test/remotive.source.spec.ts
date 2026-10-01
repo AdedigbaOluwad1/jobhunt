@@ -14,10 +14,7 @@ function makeSource(remoteOverrides: Record<string, unknown> = {}) {
     load: () =>
       makeTestConfig({
         sources: {
-          greenhouse: [],
-          lever: [],
-          lever_eu: [],
-          ashby: [],
+          ...makeTestConfig().sources,
           remote: { remotive: { enabled: true, categories: ['software-dev'], minIntervalHours: 12 }, ...remoteOverrides },
         },
       }),
@@ -30,7 +27,7 @@ describe('RemotiveSource', () => {
 
   it('produces no targets when disabled', () => {
     const configService = {
-      load: () => makeTestConfig({ sources: { greenhouse: [], lever: [], lever_eu: [], ashby: [] } }),
+      load: () => makeTestConfig({ sources: makeTestConfig().sources }),
     } as unknown as ConfigService;
     expect(new RemotiveSource(configService).targets()).toEqual([]);
   });

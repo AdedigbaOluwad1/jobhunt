@@ -3,7 +3,19 @@ import * as YAML from 'yaml';
 import { AppError } from '../common/errors';
 import { configPath } from '../common/paths';
 
-const ARRAY_SOURCES = ['greenhouse', 'lever', 'lever_eu', 'ashby'] as const;
+const ARRAY_SOURCES = [
+  'greenhouse',
+  'lever',
+  'lever_eu',
+  'ashby',
+  'workable',
+  'recruitee',
+  'bamboohr',
+  'teamtailor',
+  'breezy',
+  'smartrecruiters',
+  'jazzhr',
+] as const;
 export type ArraySource = (typeof ARRAY_SOURCES)[number];
 
 export function isArraySource(source: string): source is ArraySource {

@@ -39,6 +39,13 @@ const SourcesSchema = z
     lever: z.array(z.string()).default([]),
     lever_eu: z.array(z.string()).default([]),
     ashby: z.array(z.string()).default([]),
+    workable: z.array(z.string()).default([]),
+    recruitee: z.array(z.string()).default([]),
+    bamboohr: z.array(z.string()).default([]),
+    teamtailor: z.array(z.string()).default([]),
+    breezy: z.array(z.string()).default([]),
+    smartrecruiters: z.array(z.string()).default([]),
+    jazzhr: z.array(z.string()).default([]),
     companyNames: z.record(z.string(), z.string()).optional(),
     remote: z
       .object({

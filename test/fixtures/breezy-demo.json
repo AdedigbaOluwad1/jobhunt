@@ -1,0 +1,84 @@
+[
+ {
+  "id": "98323abf2296",
+  "friendly_id": "98323abf2296-employee-12",
+  "name": "Employee #12",
+  "url": "https://breezy.breezy.hr/p/98323abf2296-employee-12",
+  "published_date": "2024-02-15T14:37:22.684Z",
+  "type": {
+   "id": "other",
+   "name": "Other"
+  },
+  "location": {
+   "country": {
+    "name": "United States",
+    "id": "US"
+   },
+   "state": {
+    "id": "FL",
+    "name": "Florida"
+   },
+   "city": "Chaos",
+   "primary": true,
+   "is_remote": false,
+   "name": "Chaos, FL"
+  },
+  "department": "Does Not Matter",
+  "salary": "$0.05 \u2013 $0.06 / hour",
+  "company": {
+   "name": "MS Breezy Trial",
+   "logo_url": null,
+   "friendly_id": "breezy",
+   "isMultipleLocationsEnabled": false
+  },
+  "locations": [
+   {
+    "country": {
+     "name": "United States",
+     "id": "US"
+    },
+    "state": {
+     "id": "FL",
+     "name": "Florida"
+    },
+    "city": "Chaos",
+    "primary": true,
+    "is_remote": false,
+    "name": "Chaos, FL",
+    "id": "2007f9c3168b"
+   }
+  ]
+ },
+ {
+  "id": "088ac6d52139",
+  "friendly_id": "088ac6d52139-open-position",
+  "name": "Open Position",
+  "url": "https://breezy.breezy.hr/p/088ac6d52139-open-position",
+  "published_date": "2023-04-06T01:32:13.932Z",
+  "type": {
+   "id": "contract",
+   "name": "Contract"
+  },
+  "location": {
+   "country": {
+    "name": "United States",
+    "id": "US"
+   },
+   "state": {
+    "id": "NY",
+    "name": "New York"
+   },
+   "city": "New York",
+   "name": "New York, NY"
+  },
+  "department": "Sporting Goods",
+  "salary": "$1 \u2013 $5 / year",
+  "company": {
+   "name": "MS Breezy Trial",
+   "logo_url": null,
+   "friendly_id": "breezy",
+   "isMultipleLocationsEnabled": false
+  },
+  "locations": []
+ }
+]

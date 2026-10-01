@@ -1,0 +1,100 @@
+{
+ "offers": [
+  {
+   "country": "Deutschland",
+   "department": "Produkt",
+   "position": 2,
+   "max_hours_per_week": "35",
+   "open_questions": [],
+   "guid": "c5tkw",
+   "max_hours": 35,
+   "locations_question_required": true,
+   "on_site": true,
+   "options_salutation": "off",
+   "cover_image": null,
+   "country_code": "DE",
+   "highlight": null,
+   "location": "Berlin, Berlin, Deutschland",
+   "location_question_visible": false,
+   "min_hours": 32,
+   "dynamic_fields": [],
+   "mailbox_email": "job.c5tkw@personio.recruitee.com",
+   "updated_at": "2025-01-02 18:53:43 UTC",
+   "min_hours_per_week": "32",
+   "education_code": "high_school_coursework",
+   "sharing_description": "Test",
+   "options_cover_letter": "optional",
+   "postal_code": null,
+   "published_at": "2025-01-02 14:22:42 UTC",
+   "sharing_title": "API Job",
+   "translations": {
+    "de": {
+     "description": "<h3>Stellenangebot: API Job bei FD Sandbox in Berlin</h3><p>Wir suchen eine engagierte Person f\u00fcr die Position des API Jobs bei FD Sandbox in unserer Produktabteilung. Die Stelle befindet sich in Berlin, in der Musterstr 1, 10111.</p><ul><li><p><strong>Standort:</strong> Berlin, Musterstr 1, 10111</p></li><li><p><strong>Abteilung:</strong> Produkt</p></li><li><p><strong>Art der Anstellung:</strong> Vollzeit</p></li></ul><p>Als Teil unseres Teams wirst du an der Entwicklung und Implementierung von APIs arbeiten, um die Interaktion mit unseren Produkten zu verbessern. Du wirst eng mit unserem Entwicklerteam zusammenarbeiten und innovative L\u00f6sungen f\u00fcr unsere Kunden schaffen.</p><p>Wir suchen nach jemandem, der eine Leidenschaft f\u00fcr APIs und eine kreative Denkweise hat. Wenn du gerne in einem dynamischen Umfeld arbeitest und die Zukunft der Technologie mitgestalten m\u00f6chtest, dann bist du bei uns genau richtig!</p>",
+     "title": "API Job - Berlin - Musterstr 1, 10111",
+     "highlight": null,
+     "requirements": null,
+     "sharing_image": null,
+     "sharing_title": "API Job",
+     "sharing_description": "Test",
+     "locations_question": "Was ist dein bevorzugter Arbeitsort?"
+    }
+   },
+   "careers_apply_url": "https://personio.recruitee.com/o/api-job-berlin-musterstr-1-10111/c/new",
+   "sharing_image": null,
+   "salary": {
+    "max": null,
+    "min": null,
+    "period": null,
+    "currency": null
+   },
+   "description": "<h3>Stellenangebot: API Job bei FD Sandbox in Berlin</h3><p>Wir suchen eine engagierte Person f\u00fcr die Position des API Jobs bei FD Sandbox in unserer Produktabteilung. Die Stelle befindet sich in Berlin, in der Musterstr 1, 10111.</p><ul><li><p><strong>Standort:</strong> Berlin, Musterstr 1, 10111</p></li><li><p><strong>Abteilung:</strong> Produkt</p></li><li><p><strong>Art der Anstellung:</strong> Vollzeit</p></li></ul><p>Als Teil unseres Teams wirst du an der Entwicklung und Implementierung von APIs arbeiten, um die Interaktion mit unseren Produkten zu verbessern. Du wirst eng mit unserem Entwicklerteam zusammenarbeiten und innovative L\u00f6sungen f\u00fcr unsere Kunden schaffen.</p><p>Wir suchen nach jemandem, der eine Leidenschaft f\u00fcr APIs und eine kreative Denkweise hat. Wenn du gerne in einem dynamischen Umfeld arbeitest und die Zukunft der Technologie mitgestalten m\u00f6chtest, dann bist du bei uns genau richtig!</p>",
+   "options_title": "off",
+   "locations": [
+    {
+     "id": 185790,
+     "name": "Berlin",
+     "state": "Berlin",
+     "country": "Deutschland",
+     "city": "Berlin",
+     "translations": {
+      "de": {
+       "name": "Berlin",
+       "city": "Berlin",
+       "postal_code": null,
+       "street": null,
+       "note": null
+      }
+     },
+     "country_code": "DE",
+     "state_code": "BE",
+     "postal_code": null,
+     "street": null,
+     "note": null
+    }
+   ],
+   "options_cv": "required",
+   "remote": false,
+   "state_code": "BE",
+   "category_code": "accountancy",
+   "hybrid": false,
+   "city": "Berlin",
+   "locations_question": "Was ist dein bevorzugter Arbeitsort?",
+   "id": 1968676,
+   "slug": "api-job-berlin-musterstr-1-10111",
+   "state_name": "Berlin",
+   "requirements": null,
+   "close_at": null,
+   "locations_question_type": "multiple_choice",
+   "created_at": "2025-01-02 14:19:26 UTC",
+   "company_name": "FD Sandbox",
+   "title": "API Job - Berlin - Musterstr 1, 10111",
+   "options_phone": "required",
+   "careers_url": "https://personio.recruitee.com/o/api-job-berlin-musterstr-1-10111",
+   "status": "published",
+   "experience_code": "experienced",
+   "employment_type_code": "fulltime_permanent",
+   "options_photo": "off",
+   "tags": []
+  }
+ ]
+}

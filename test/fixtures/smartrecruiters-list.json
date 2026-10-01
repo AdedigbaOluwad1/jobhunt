@@ -1,0 +1,284 @@
+{
+ "offset": 0,
+ "limit": 2,
+ "totalFound": 4836,
+ "content": [
+  {
+   "id": "744000152849704",
+   "name": "Sales Representative - Mobility Aftermarket",
+   "uuid": "1180940e-01b6-42a5-9b79-c25dcb63da6c",
+   "jobAdId": "a61228df-c809-4b3a-aa42-02b3aefb71d9",
+   "defaultJobAd": true,
+   "refNumber": "REF297397X",
+   "company": {
+    "identifier": "BoschGroup",
+    "name": "Bosch Group"
+   },
+   "releasedDate": "2026-10-01T07:03:08.633Z",
+   "location": {
+    "city": "Koropi",
+    "region": "Attika",
+    "country": "gr",
+    "address": "Ercheias 37",
+    "postalCode": "19400",
+    "remote": false,
+    "hybrid": true,
+    "fullLocation": "Koropi, Attika, Greece"
+   },
+   "industry": {
+    "id": "mechanical_engineering",
+    "label": "Mechanical Or Industrial Engineering"
+   },
+   "department": {},
+   "function": {
+    "id": "sales",
+    "label": "Sales"
+   },
+   "typeOfEmployment": {
+    "id": "permanent",
+    "label": "Full-time"
+   },
+   "experienceLevel": {
+    "id": "associate",
+    "label": "Associate"
+   },
+   "customField": [
+    {
+     "fieldId": "5abe2a4ab60a5e486a2d9b1d",
+     "fieldLabel": "Contract type",
+     "valueId": "1e46492b-d24f-460c-b095-38cf08a778d8",
+     "valueLabel": "Unlimited"
+    },
+    {
+     "fieldId": "5abe28e96d8bc56863dd9746",
+     "fieldLabel": "Tariff Area",
+     "valueId": "02a2e6fb-afd0-4fe6-9805-0d4dd3326ae9",
+     "valueLabel": "Greece Local Grades"
+    },
+    {
+     "fieldId": "586a997ee4b05fd937b86098",
+     "fieldLabel": "Legal Entity(acronym)",
+     "valueId": "affe6ab1-7e05-4b41-ae7f-1f640147e7dd",
+     "valueLabel": "RBGR"
+    },
+    {
+     "fieldId": "586a99b5e4b0daa006ae1079",
+     "fieldLabel": "Working Location",
+     "valueId": "1e0a1ee2-67c4-4c59-96f6-3797df81b901",
+     "valueLabel": "Athens"
+    },
+    {
+     "fieldId": "5abe295a6d8bc56863dd9747",
+     "fieldLabel": "Global Salary Level",
+     "valueId": "80ae06a1-4738-48e8-8aea-4613f58ecd57",
+     "valueLabel": "Others"
+    },
+    {
+     "fieldId": "69ca83a2489188782a1e9f87",
+     "fieldLabel": "Direct Or Indirect",
+     "valueId": "1aefbf4c-c10a-422e-a975-a504a7117792",
+     "valueLabel": "Indirect"
+    },
+    {
+     "fieldId": "5abe29f9b60a5e486a2d9b1c",
+     "fieldLabel": "Working hours",
+     "valueId": "60756b3e-dbab-4353-ac3a-0064d2bb27d8",
+     "valueLabel": "Full-time"
+    },
+    {
+     "fieldId": "586a9995e4b0daa006ae1078",
+     "fieldLabel": "Legal Entity",
+     "valueId": "93b94427-96fc-41e8-9dc4-435eb173dee3",
+     "valueLabel": "Robert Bosch Greece"
+    },
+    {
+     "fieldId": "691cf1c93001c782b9560ab7",
+     "fieldLabel": "Division full name",
+     "valueId": "b2e47e43-790d-4acb-871a-2ed61d7177ba",
+     "valueLabel": "Mobility Aftermarket"
+    },
+    {
+     "fieldId": "5abe27936d8bc56863dd9745",
+     "fieldLabel": "Position type",
+     "valueId": "c7b4da31-6f38-405a-b2e8-08a76e3c3f2c",
+     "valueLabel": "Professional"
+    },
+    {
+     "fieldId": "COUNTRY",
+     "fieldLabel": "Country/Region",
+     "valueId": "gr",
+     "valueLabel": "Greece"
+    },
+    {
+     "fieldId": "586a971ee4b0daa006ae1077",
+     "fieldLabel": "Brands",
+     "valueId": "default",
+     "valueLabel": "Bosch Group"
+    },
+    {
+     "fieldId": "586a996ce4b05fd937b86097",
+     "fieldLabel": "Working Country",
+     "valueId": "70c68dbc-f2d0-43e8-8b96-4b05baadc15e",
+     "valueLabel": "Greece"
+    },
+    {
+     "fieldId": "586a9b22e4b05fd937b8609a",
+     "fieldLabel": "Local Grade",
+     "valueId": "a273f4a7-5acb-471f-9839-54beef4159d2",
+     "valueLabel": "GR_belowSL1"
+    },
+    {
+     "fieldId": "586a99a5e4b05fd937b86099",
+     "fieldLabel": "Division",
+     "valueId": "AA",
+     "valueLabel": "MA"
+    }
+   ],
+   "visibility": "PUBLIC",
+   "ref": "https://api.smartrecruiters.com/v1/companies/BoschGroup/postings/744000152849704",
+   "language": {
+    "code": "en",
+    "label": "English",
+    "labelNative": "English (US)"
+   }
+  },
+  {
+   "id": "744000152848874",
+   "name": "Wiring Harness Design Specialist- Siemens NX",
+   "uuid": "8d2e1472-29ca-48b4-829c-06d2b913586b",
+   "jobAdId": "59d729ee-9f9d-4521-878c-d910b6fc1da7",
+   "defaultJobAd": true,
+   "refNumber": "REF284312Z",
+   "company": {
+    "identifier": "BoschGroup",
+    "name": "Bosch Group"
+   },
+   "releasedDate": "2026-10-01T06:51:28.549Z",
+   "location": {
+    "city": "hosur road bangalore",
+    "country": "in",
+    "address": "plot no.76 & 77 & part 78 keonics electronic city,",
+    "postalCode": "560100",
+    "remote": false,
+    "hybrid": false,
+    "fullLocation": "hosur road bangalore, , India"
+   },
+   "industry": {
+    "id": "computer_software",
+    "label": "Computer Software"
+   },
+   "department": {},
+   "function": {
+    "id": "engineering",
+    "label": "Engineering"
+   },
+   "typeOfEmployment": {
+    "id": "permanent",
+    "label": "Full-time"
+   },
+   "experienceLevel": {
+    "id": "associate",
+    "label": "Associate"
+   },
+   "customField": [
+    {
+     "fieldId": "5abe2a4ab60a5e486a2d9b1d",
+     "fieldLabel": "Contract type",
+     "valueId": "1e46492b-d24f-460c-b095-38cf08a778d8",
+     "valueLabel": "Unlimited"
+    },
+    {
+     "fieldId": "5abe28e96d8bc56863dd9746",
+     "fieldLabel": "Tariff Area",
+     "valueId": "2473485f-051f-4fbc-b802-f3620b73998c",
+     "valueLabel": "India Local Grades"
+    },
+    {
+     "fieldId": "586a997ee4b05fd937b86098",
+     "fieldLabel": "Legal Entity(acronym)",
+     "valueId": "RBEI",
+     "valueLabel": "BGSW"
+    },
+    {
+     "fieldId": "586a99b5e4b0daa006ae1079",
+     "fieldLabel": "Working Location",
+     "valueId": "Bengaluru (prev. Bangalore)",
+     "valueLabel": "Bengaluru (prev. Bangalore)"
+    },
+    {
+     "fieldId": "5abe295a6d8bc56863dd9747",
+     "fieldLabel": "Global Salary Level",
+     "valueId": "427b1359-5057-4375-a2ae-6c649782296d",
+     "valueLabel": "Experienced/ Middle Tariff"
+    },
+    {
+     "fieldId": "69ca83a2489188782a1e9f87",
+     "fieldLabel": "Direct Or Indirect",
+     "valueId": "1aefbf4c-c10a-422e-a975-a504a7117792",
+     "valueLabel": "Indirect"
+    },
+    {
+     "fieldId": "5abe29f9b60a5e486a2d9b1c",
+     "fieldLabel": "Working hours",
+     "valueId": "60756b3e-dbab-4353-ac3a-0064d2bb27d8",
+     "valueLabel": "Full-time"
+    },
+    {
+     "fieldId": "586a9995e4b0daa006ae1078",
+     "fieldLabel": "Legal Entity",
+     "valueId": "Robert Bosch Engineering and Business Solutions Private Ltd.",
+     "valueLabel": "Bosch Global Software Technologies Private Limited"
+    },
+    {
+     "fieldId": "691cf1c93001c782b9560ab7",
+     "fieldLabel": "Division full name",
+     "valueId": "2c84b9fd-f59a-4d8f-8666-3d3e8b6d5cef",
+     "valueLabel": "BGSW"
+    },
+    {
+     "fieldId": "5abe27936d8bc56863dd9745",
+     "fieldLabel": "Position type",
+     "valueId": "c7b4da31-6f38-405a-b2e8-08a76e3c3f2c",
+     "valueLabel": "Professional"
+    },
+    {
+     "fieldId": "COUNTRY",
+     "fieldLabel": "Country/Region",
+     "valueId": "in",
+     "valueLabel": "India"
+    },
+    {
+     "fieldId": "586a971ee4b0daa006ae1077",
+     "fieldLabel": "Brands",
+     "valueId": "default",
+     "valueLabel": "Bosch Group"
+    },
+    {
+     "fieldId": "586a996ce4b05fd937b86097",
+     "fieldLabel": "Working Country",
+     "valueId": "IN",
+     "valueLabel": "India"
+    },
+    {
+     "fieldId": "586a9b22e4b05fd937b8609a",
+     "fieldLabel": "Local Grade",
+     "valueId": "IN_RBEI_52",
+     "valueLabel": "IN_RBEI_52"
+    },
+    {
+     "fieldId": "586a99a5e4b05fd937b86099",
+     "fieldLabel": "Division",
+     "valueId": "RBEI",
+     "valueLabel": "BGSW"
+    }
+   ],
+   "visibility": "PUBLIC",
+   "ref": "https://api.smartrecruiters.com/v1/companies/BoschGroup/postings/744000152848874",
+   "language": {
+    "code": "en",
+    "label": "English",
+    "labelNative": "English (US)"
+   }
+  }
+ ]
+}

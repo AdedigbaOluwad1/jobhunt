@@ -1,0 +1,47 @@
+{
+ "meta": {
+  "totalCount": 2
+ },
+ "result": [
+  {
+   "id": "1256",
+   "jobOpeningName": "Senior Manager, Financial Reporting",
+   "departmentId": "18546",
+   "departmentLabel": "Finance",
+   "employmentStatusLabel": "Full-Time",
+   "employmentType": null,
+   "location": {
+    "city": "Lekki",
+    "state": "Lagos"
+   },
+   "atsLocation": {
+    "country": null,
+    "state": null,
+    "province": null,
+    "city": null
+   },
+   "isRemote": null,
+   "locationType": "0"
+  },
+  {
+   "id": "1328",
+   "jobOpeningName": "Country Manager, Zambia",
+   "departmentId": "21411",
+   "departmentLabel": "Commercial Group - Enterprise",
+   "employmentStatusLabel": "Full-Time",
+   "employmentType": null,
+   "location": {
+    "city": "Lusaka",
+    "state": "."
+   },
+   "atsLocation": {
+    "country": null,
+    "state": null,
+    "province": null,
+    "city": null
+   },
+   "isRemote": null,
+   "locationType": "0"
+  }
+ ]
+}
